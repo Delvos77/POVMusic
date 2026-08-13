@@ -815,21 +815,18 @@ Can't unsee what I've seen`
         let isScrolling = false;
         let fontScale = 1.0;
 
-        // Fungsi konversi link Google Drive agar otomatis menjadi link direct streaming/download
         function parseGoogleDriveUrl(url) {
             if (!url) return '';
             let cleanUrl = url.trim();
-            // Jika link mengandung /file/d/ID/view atau sejenisnya
             let match = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
                 return `https://docs.google.com/uc?export=download&id=${match[1]}`;
             }
-            // Jika sudah format id=
             let matchParam = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
             if (matchParam && matchParam[1]) {
                 return `https://docs.google.com/uc?export=download&id=${matchParam[1]}`;
             }
-            return cleanUrl; // Kembalikan apa adanya jika bukan link GDrive (misal link eksternal biasa)
+            return cleanUrl;
         }
 
         function toggleMobileSidebar() {
@@ -963,12 +960,12 @@ Can't unsee what I've seen`
             document.getElementById('songDuration').innerText = "00:00";
 
             if (!song.audioPath || song.audioPath.trim() === "") {
-                playerBar.style.display = 'none'; // Sembunyikan pemutar jika tidak ada link audio
+                playerBar.style.display = 'none';
                 audioPlayer.src = "";
                 return;
             }
 
-            playerBar.style.display = 'flex'; // Tampilkan pemutar jika ada link audio
+            playerBar.style.display = 'flex';
             let directUrl = parseGoogleDriveUrl(song.audioPath);
 
             audioPlayer.src = directUrl;
