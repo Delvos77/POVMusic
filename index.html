@@ -1140,24 +1140,36 @@
             const lines = song.rawText.split('\n');
             let pendingChordLine = '';
 
-            lines.forEach(line => {
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
                 let trimmed = line.trim();
                 
-                if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-                    let innerContent = trimmed.slice(1, -1).trim();
-                    let isSectionTag = /^(intro|verse|chorus|reff|bridge|outro|solo|coda|bait)/i.test(innerContent);
-                    
-                    if (isSectionTag) {
-                        const tag = document.createElement('div');
-                        tag.className = 'section-tag';
-                        tag.innerText = innerContent;
-                        container.appendChild(tag);
-                        pendingChordLine = '';
-                    } else {
-                        pendingChordLine = line.replace(/\[/g, ' ').replace(/\]/g, ' ');
-                    }
-                } 
-                else if (trimmed !== '') {
+                if (trimmed === '') continue;
+
+                // Cek apakah baris ini adalah Section Tag (contoh: [Verse] atau Verse:)
+                let isSectionTag = (trimmed.startsWith('[') && trimmed.endsWith(']')) || 
+                                   /^(intro|verse|chorus|reff|bridge|outro|solo|coda|bait)\s*[:\-]?$/i.test(trimmed);
+                
+                if (isSectionTag) {
+                    let innerContent = trimmed.replace(/^\[|\]$/g, '').trim();
+                    const tag = document.createElement('div');
+                    tag.className = 'section-tag';
+                    tag.innerText = innerContent;
+                    container.appendChild(tag);
+                    pendingChordLine = '';
+                    continue;
+                }
+
+                // Deteksi otomatis baris chord tanpa tanda kurung siku [...]
+                // Baris dianggap chord jika mayoritas kata di dalamnya adalah nama kunci gitar (A-G)
+                let tokens = trimmed.split(/\s+/);
+                let chordPattern = /^[A-G][#b]?(m|7|maj7|dim|sus4|2|4)?(\/[A-G][#b]?)?$/;
+                let chordCount = tokens.filter(token => chordPattern.test(token)).length;
+                let isChordLine = tokens.length > 0 && (chordCount / tokens.length >= 0.5);
+
+                if (isChordLine) {
+                    pendingChordLine = line;
+                } else {
                     const wrapper = document.createElement('div');
                     wrapper.className = 'lyric-line-wrapper';
 
@@ -1180,7 +1192,7 @@
 
                     pendingChordLine = '';
                 }
-            });
+            }
 
             toggleChords();
         }
