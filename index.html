@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chordify Web - Firebase Integration</title>
+    <title>Chordify Web - Google Drive Audio Integration</title>
     <!-- Google Fonts & FontAwesome -->
     <link href="https://fonts.googleapis.com/css2?family=Circular+Std:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -782,27 +782,20 @@
         <div class="viewport-body" id="viewportBody"></div>
     </div>
 
-    <!-- Firebase & Main Script -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase.js";
-        import { getDatabase, ref, get, set, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-        // Konfigurasi Firebase Anda
-        const firebaseConfig = {
-            apiKey: "AIzaSyAkZBMA-K5LxNWyMiwZMp7Upbgtar4rJZU",
-            authDomain: "music-c-b3dfa.firebaseapp.com",
-            projectId: "music-c-b3dfa",
-            storageBucket: "music-c-b3dfa.firebasestorage.app",
-            messagingSenderId: "674465686946",
-            appId: "1:674465686946:web:37dee28607362fd3ac7efb",
-            measurementId: "G-WKQEMCQ9D8"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        let songKeys = []; // Menyimpan unique key Firebase untuk tiap lagu
-        window.songList = [];
+    <script>
+        let songList = JSON.parse(localStorage.getItem('web_saved_songs')) || [
+            {
+                title: "Here Again (Contoh GDrive)",
+                artist: "Elevation Worship",
+                audioPath: "", 
+                rawText: 
+`[Verse 1]
+[C       G/B    Am]
+Can't go back to the beginning
+[F       C      G]
+Can't unsee what I've seen`
+            }
+        ];
 
         let currentSongIndex = 0;
         let queueList = []; 
@@ -822,58 +815,37 @@
         let isScrolling = false;
         let fontScale = 1.0;
 
-        // Ambil data dari Firebase saat aplikasi pertama kali dimuat
-        async function fetchSongsFromFirebase(selectTargetIndex = 0) {
-            const viewport = document.getElementById('viewportBody');
-            try {
-                const songsRef = ref(db, 'songs');
-                const snapshot = await get(songsRef);
-
-                window.songList = [];
-                songKeys = [];
-
-                if (snapshot.exists()) {
-                    const data = snapshot.val();
-                    Object.keys(data).forEach(key => {
-                        songKeys.push(key);
-                        window.songList.push(data[key]);
-                    });
-                }
-
-                if (window.songList.length > 0) {
-                    let target = Math.min(selectTargetIndex, window.songList.length - 1);
-                    selectSong(target, true);
-                } else {
-                    document.getElementById('contentHeader').style.display = 'none';
-                    viewport.innerHTML = `<p style="color:#b3b3b3; text-align:center; margin-top:50px;">Belum ada lagu di database Firebase.</p>`;
-                    renderSidebar();
-                }
-            } catch (error) {
-                console.error("Gagal memuat dari Firebase:", error);
-                viewport.innerHTML = `<p style="color:#ff4b4b; text-align:center; margin-top:50px;">Gagal terhubung ke Firebase Database.</p>`;
-            }
-        }
-
+        // Fungsi konversi link Google Drive yang disempurnakan dengan &confirm=t
         function parseGoogleDriveUrl(url) {
             if (!url) return '';
             let cleanUrl = url.trim();
-            let match = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-            if (match && match[1]) {
-                return `https://docs.google.com/uc?export=download&id=${match[1]}`;
+            let fileId = '';
+            
+            let match1 = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+            if (match1 && match1[1]) {
+                fileId = match1[1];
             }
-            let matchParam = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-            if (matchParam && matchParam[1]) {
-                return `https://docs.google.com/uc?export=download&id=${matchParam[1]}`;
+            
+            if (!fileId) {
+                let match2 = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                if (match2 && match2[1]) {
+                    fileId = match2[1];
+                }
             }
+            
+            if (fileId) {
+                return `https://docs.google.com/uc?export=download&confirm=t&id=${fileId}`;
+            }
+            
             return cleanUrl;
         }
 
-        window.toggleMobileSidebar = function() {
+        function toggleMobileSidebar() {
             const sidebar = document.getElementById('appSidebar');
             sidebar.classList.toggle('mobile-open');
         }
 
-        window.renderSidebar = function() {
+        function renderSidebar() {
             const metaContainer = document.getElementById('songListContainer');
             const lyricContainer = document.getElementById('lyricListContainer');
             const libraryContainer = document.getElementById('libraryListContainer');
@@ -887,7 +859,7 @@
                 metaContainer.style.display = 'none';
             } else {
                 metaContainer.style.display = 'flex';
-                window.songList.forEach((song, index) => {
+                songList.forEach((song, index) => {
                     if (song.title.toLowerCase().includes(metaKeyword) || song.artist.toLowerCase().includes(metaKeyword)) {
                         const item = document.createElement('div');
                         item.className = `song-item ${index === currentSongIndex && !isEditing ? 'active' : ''}`;
@@ -903,7 +875,7 @@
                 lyricContainer.style.display = 'none';
             } else {
                 lyricContainer.style.display = 'flex';
-                window.songList.forEach((song, index) => {
+                songList.forEach((song, index) => {
                     if (song.rawText.toLowerCase().includes(lyricKeyword)) {
                         const item = document.createElement('div');
                         item.className = `song-item ${index === currentSongIndex && !isEditing ? 'active' : ''}`;
@@ -920,7 +892,7 @@
                 document.getElementById('libraryCount').innerText = '0 lagu';
             } else {
                 libraryContainer.style.display = 'flex';
-                let indexedSongs = window.songList.map((song, idx) => ({ ...song, originalIndex: idx }));
+                let indexedSongs = songList.map((song, idx) => ({ ...song, originalIndex: idx }));
                 indexedSongs.sort((a, b) => a.title.localeCompare(b.title, 'id', { sensitivity: 'base' }));
 
                 let filteredLibrary = indexedSongs.filter(song => 
@@ -957,7 +929,7 @@
             }
 
             queueList.forEach((songIndex, qIdx) => {
-                const song = window.songList[songIndex];
+                const song = songList[songIndex];
                 if (!song) return;
 
                 const item = document.createElement('div');
@@ -993,12 +965,12 @@
         }
 
         function initAudioPlayerForCurrentSong() {
-            const song = window.songList[currentSongIndex];
+            const song = songList[currentSongIndex];
             const playerBar = document.getElementById('playerBarContainer');
             document.getElementById('songCurrentTime').innerText = "00:00";
             document.getElementById('songDuration').innerText = "00:00";
 
-            if (!song || !song.audioPath || song.audioPath.trim() === "") {
+            if (!song.audioPath || song.audioPath.trim() === "") {
                 playerBar.style.display = 'none';
                 audioPlayer.src = "";
                 return;
@@ -1036,7 +1008,7 @@
             };
         }
 
-        window.togglePlayMusic = function() {
+        function togglePlayMusic() {
             if (!audioPlayer.src) {
                 alert('Link audio Google Drive belum diatur!');
                 return;
@@ -1103,22 +1075,25 @@
             }
         }
 
-        window.playNextQueue = function() {
+        function playNextQueue() {
             if (queueList.length === 0) return;
             let nextQIdx = (currentQueueIndex + 1) % queueList.length;
             playQueueIndex(nextQIdx);
         }
 
-        window.playPrevQueue = function() {
+        function playPrevQueue() {
             if (queueList.length === 0) return;
             let prevQIdx = (currentQueueIndex - 1 + queueList.length) % queueList.length;
             playQueueIndex(prevQIdx);
         }
 
-        window.renderPlayer = function() {
-            if (window.songList.length === 0) return;
+        function renderPlayer() {
+            if (songList.length === 0) {
+                document.getElementById('viewportBody').innerHTML = `<p style="color:#b3b3b3; text-align:center; margin-top:50px;">Belum ada lagu.</p>`;
+                return;
+            }
 
-            const song = window.songList[currentSongIndex];
+            const song = songList[currentSongIndex];
             document.getElementById('displayTitle').innerText = song.title;
             document.getElementById('displayArtist').innerText = song.artist;
 
@@ -1173,18 +1148,18 @@
             toggleChords();
         }
 
-        window.updateScrollSpeedFromSlider = function(val) {
+        function updateScrollSpeedFromSlider(val) {
             scrollSpeed = parseFloat(val);
             document.getElementById('scrollSpeedDisplay').innerText = scrollSpeed.toFixed(1) + 'x';
         }
 
-        window.updateFontSizeFromSlider = function(val) {
+        function updateFontSizeFromSlider(val) {
             fontScale = parseFloat(parseFloat(val).toFixed(1));
             document.documentElement.style.setProperty('--font-scale', fontScale);
             document.getElementById('fontSizeDisplay').innerText = Math.round(fontScale * 100) + '%';
         }
 
-        window.toggleAutoScroll = function() {
+        function toggleAutoScroll() {
             if (isScrolling) {
                 stopAutoScroll();
             } else {
@@ -1235,7 +1210,7 @@
             }
         }
 
-        window.toggleFullscreen = function() {
+        function toggleFullscreen() {
             const body = document.getElementById('mainBody');
             const btn = document.getElementById('btnFullscreen');
             body.classList.toggle('fullscreen-mode');
@@ -1248,7 +1223,7 @@
             }
         }
 
-        window.showAddForm = function() {
+        function showAddForm() {
             stopAudio();
             stopAutoScroll();
             isEditing = true;
@@ -1258,7 +1233,7 @@
             const container = document.getElementById('viewportBody');
             container.innerHTML = `
                 <div class="form-container">
-                    <h2>Tambah Lagu ke Firebase</h2>
+                    <h2>Tambah Lagu & Link Google Drive</h2>
                     <div class="form-group">
                         <label>Judul Lagu</label>
                         <input type="text" id="inputTitle" placeholder="Misal: Here Again">
@@ -1268,7 +1243,7 @@
                         <input type="text" id="inputArtist" placeholder="Misal: Elevation Worship">
                     </div>
                     <div class="form-group">
-                        <label>Link Audio (Google Drive)</label>
+                        <label>Link Audio (Tempel Link Google Drive di sini)</label>
                         <input type="text" id="inputAudioPath" placeholder="https://drive.google.com/file/d/.../view">
                     </div>
                     <div class="form-group">
@@ -1276,26 +1251,26 @@
                         <textarea id="inputRaw" placeholder="[Verse 1]&#10;[C     G/B   Am]&#10;Can't go back..."></textarea>
                     </div>
                     <div class="form-buttons">
-                        <button class="btn-submit" onclick="saveNewSongToFirebase()">Simpan ke Firebase</button>
+                        <button class="btn-submit" onclick="saveNewSong()">Simpan Lagu</button>
                         <button class="btn-cancel" onclick="selectSong(0, false)">Batal</button>
                     </div>
                 </div>
             `;
         }
 
-        window.showEditForm = function() {
+        function showEditForm() {
             stopAudio();
             stopAutoScroll();
             isEditing = true;
             renderSidebar();
             document.getElementById('contentHeader').style.display = 'none';
 
-            const song = window.songList[currentSongIndex];
+            const song = songList[currentSongIndex];
 
             const container = document.getElementById('viewportBody');
             container.innerHTML = `
                 <div class="form-container">
-                    <h2>Edit Lagu di Firebase</h2>
+                    <h2>Edit Lagu & Link Google Drive</h2>
                     <div class="form-group">
                         <label>Judul Lagu</label>
                         <input type="text" id="inputTitle" value="${song.title}">
@@ -1305,7 +1280,7 @@
                         <input type="text" id="inputArtist" value="${song.artist}">
                     </div>
                     <div class="form-group">
-                        <label>Link Audio (Google Drive)</label>
+                        <label>Link Audio (Tempel Link Google Drive di sini)</label>
                         <input type="text" id="inputAudioPath" value="${song.audioPath || ''}" placeholder="https://drive.google.com/file/d/.../view">
                     </div>
                     <div class="form-group">
@@ -1313,15 +1288,15 @@
                         <textarea id="inputRaw">${song.rawText}</textarea>
                     </div>
                     <div class="form-buttons">
-                        <button class="btn-submit" onclick="updateSongInFirebase()">Simpan Perubahan</button>
+                        <button class="btn-submit" onclick="updateSong()">Simpan Perubahan</button>
                         <button class="btn-cancel" onclick="selectSong(${currentSongIndex}, false)">Batal</button>
-                        <button class="btn-delete" onclick="deleteSongFromFirebase()">Hapus Lagu</button>
+                        <button class="btn-delete" onclick="deleteSong()">Hapus Lagu</button>
                     </div>
                 </div>
             `;
         }
 
-        window.saveNewSongToFirebase = async function() {
+        function saveNewSong() {
             const title = document.getElementById('inputTitle').value.trim();
             const artist = document.getElementById('inputArtist').value.trim();
             const audioPath = document.getElementById('inputAudioPath').value.trim();
@@ -1332,25 +1307,17 @@
                 return;
             }
 
-            try {
-                const songsRef = ref(db, 'songs');
-                const newSongRef = push(songsRef);
-                await set(newSongRef, {
-                    title,
-                    artist: artist || 'Unknown Artist',
-                    audioPath,
-                    rawText
-                });
-
-                alert('Lagu berhasil disimpan ke Firebase!');
-                await fetchSongsFromFirebase(window.songList.length);
-            } catch (error) {
-                console.error("Gagal menyimpan:", error);
-                alert('Gagal menyimpan lagu ke Firebase.');
-            }
+            songList.push({ 
+                title, 
+                artist: artist || 'Unknown Artist', 
+                audioPath, 
+                rawText 
+            });
+            localStorage.setItem('web_saved_songs', JSON.stringify(songList));
+            selectSong(songList.length - 1, true);
         }
 
-        window.updateSongInFirebase = async function() {
+        function updateSong() {
             const title = document.getElementById('inputTitle').value.trim();
             const artist = document.getElementById('inputArtist').value.trim();
             const audioPath = document.getElementById('inputAudioPath').value.trim();
@@ -1361,41 +1328,34 @@
                 return;
             }
 
-            const currentKey = songKeys[currentSongIndex];
-            try {
-                const songRef = ref(db, `songs/${currentKey}`);
-                await set(songRef, {
-                    title,
-                    artist: artist || 'Unknown Artist',
-                    audioPath,
-                    rawText
-                });
-
-                alert('Lagu berhasil diperbarui!');
-                await fetchSongsFromFirebase(currentSongIndex);
-            } catch (error) {
-                console.error("Gagal memperbarui:", error);
-                alert('Gagal memperbarui data di Firebase.');
-            }
+            songList[currentSongIndex] = { 
+                title, 
+                artist: artist || 'Unknown Artist', 
+                audioPath, 
+                rawText 
+            };
+            localStorage.setItem('web_saved_songs', JSON.stringify(songList));
+            selectSong(currentSongIndex, false);
         }
 
-        window.deleteSongFromFirebase = async function() {
-            if (confirm('Apakah Anda yakin ingin menghapus lagu ini dari Firebase?')) {
-                const currentKey = songKeys[currentSongIndex];
-                try {
-                    const songRef = ref(db, `songs/${currentKey}`);
-                    await remove(songRef);
-
-                    alert('Lagu berhasil dihapus.');
-                    await fetchSongsFromFirebase(0);
-                } catch (error) {
-                    console.error("Gagal menghapus:", error);
-                    alert('Gagal menghapus lagu dari database.');
+        function deleteSong() {
+            if (confirm('Apakah Anda yakin ingin menghapus lagu ini?')) {
+                songList.splice(currentSongIndex, 1);
+                localStorage.setItem('web_saved_songs', JSON.stringify(songList));
+                queueList = queueList.filter(idx => idx !== currentSongIndex).map(idx => idx > currentSongIndex ? idx - 1 : idx);
+                currentSongIndex = songList.length > 0 ? 0 : null;
+                if (currentSongIndex !== null) {
+                    selectSong(0, false);
+                } else {
+                    isEditing = false;
+                    document.getElementById('contentHeader').style.display = 'none';
+                    renderSidebar();
+                    document.getElementById('viewportBody').innerHTML = `<p style="color:#b3b3b3; text-align:center; margin-top:50px;">Belum ada lagu.</p>`;
                 }
             }
         }
 
-        window.transpose = function(step) {
+        function transpose(step) {
             currentKeyIndex = (currentKeyIndex + step + chordList.length) % chordList.length;
             document.getElementById('keyDisplay').innerText = chordList[currentKeyIndex];
             renderPlayer();
@@ -1458,7 +1418,7 @@
             return numberBase + modifier;
         }
 
-        window.toggleChords = function() {
+        function toggleChords() {
             const body = document.getElementById('mainBody');
             if (document.getElementById('chordToggle').checked) {
                 body.classList.remove('hide-chords');
@@ -1467,8 +1427,11 @@
             }
         }
 
-        // Inisialisasi awal mengambil data dari Firebase
-        fetchSongsFromFirebase(0);
+        window.onload = function() {
+            if (songList.length > 0) {
+                selectSong(0, true);
+            }
+        };
     </script>
 </body>
 </html>
