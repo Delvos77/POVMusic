@@ -8,5 +8,17 @@
   "short_name": "POV",
   "start_url": "/",
   "theme_color": "#ffffff",
-  "id": "https://delvos77.github.io/POVMusic/"
+  "id": "https://delvos77.github.io/POVMusic/",
+  "icons": [
+    {
+      "src": "POV192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "POV512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
