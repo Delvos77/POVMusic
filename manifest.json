@@ -1,0 +1,12 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "POV Library",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "POV",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "id": "https://delvos77.github.io/POVMusic/"
+}
