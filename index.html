@@ -228,62 +228,64 @@
         }
 
         .content-header {
-            padding: 20px 32px;
+            padding: 16px 20px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
             border-bottom: 1px solid rgba(255,255,255,0.05);
-            background: rgba(0,0,0,0.2);
+            background: rgba(0,0,0,0.3);
         }
 
         .header-top-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            width: 100%;
         }
 
         .song-info-banner {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
             min-width: 0;
+            flex: 1;
         }
 
         .album-art-lg {
-            width: 50px;
-            height: 50px;
+            width: 44px;
+            height: 44px;
             border-radius: 8px;
             object-fit: cover;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
             flex-shrink: 0;
         }
 
         .song-detail {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 2px;
             min-width: 0;
         }
 
         .song-detail-top {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .queue-nav-btn {
             background: #2a2a2a;
             color: #ffffff;
             border: none;
-            width: 26px;
-            height: 26px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 10px;
             transition: 0.2s;
             flex-shrink: 0;
         }
@@ -294,7 +296,7 @@
         }
 
         .song-detail h1 {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 700;
             white-space: nowrap;
             overflow: hidden;
@@ -302,32 +304,36 @@
         }
 
         .song-detail p {
-            font-size: 12px;
+            font-size: 11px;
             color: #b3b3b3;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
+        /* Perbaikan Bagian Kontrol Atas agar Rapi & Responsif */
         .control-actions {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
+            justify-content: flex-end;
         }
 
         .btn-action-icon {
             background: #2a2a2a;
             color: white;
             border: none;
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 13px;
             transition: 0.2s;
+            flex-shrink: 0;
         }
 
         .btn-action-icon:hover, .btn-action-icon.active {
@@ -338,23 +344,25 @@
         .transpose-group {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 12px;
+            gap: 4px;
+            font-size: 11px;
             color: #b3b3b3;
-            background: rgba(0,0,0,0.4);
-            padding: 4px 10px;
+            background: rgba(0,0,0,0.5);
+            padding: 3px 8px;
             border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
         }
 
         .transpose-btn {
             background: #2a2a2a;
             color: white;
             border: none;
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             cursor: pointer;
             font-weight: bold;
+            font-size: 11px;
             transition: 0.2s;
         }
 
@@ -366,16 +374,20 @@
         .toggle-switch {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 12px;
+            gap: 4px;
+            font-size: 11px;
             cursor: pointer;
             color: #b3b3b3;
+            background: rgba(0,0,0,0.5);
+            padding: 4px 8px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
         }
 
         .toggle-switch input {
             accent-color: #1db954;
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
             cursor: pointer;
         }
 
@@ -429,7 +441,7 @@
 
         .extra-toolbar input[type="range"] {
             -webkit-appearance: none;
-            width: 90px;
+            width: 80px;
             height: 6px;
             background: #2a2a2a;
             border-radius: 3px;
@@ -487,6 +499,11 @@
             padding: 6px 10px;
             border-radius: 6px;
             transition: background 0.2s, transform 0.2s;
+            cursor: pointer;
+        }
+
+        .lyric-line-wrapper:hover {
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .lyric-line-wrapper.active-lyric {
@@ -612,13 +629,13 @@
             background: #2a2a2a;
             color: white;
             border: none;
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             cursor: pointer;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 14px;
             flex-shrink: 0;
         }
 
@@ -655,7 +672,22 @@
             }
 
             .content-header {
-                padding: 12px 16px;
+                padding: 10px 12px;
+                gap: 8px;
+            }
+
+            .header-top-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .control-actions {
+                justify-content: space-between;
+                width: 100%;
+                background: rgba(0,0,0,0.2);
+                padding: 6px 10px;
+                border-radius: 8px;
             }
 
             .viewport-body {
@@ -735,6 +767,8 @@
                     </div>
                 </div>
                 <div class="control-actions">
+                    <button class="btn-action-icon" id="btnShuffle" title="Acak Lagu (Shuffle)" onclick="toggleShuffle()"><i class="fa-solid fa-shuffle"></i></button>
+                    <button class="btn-action-icon" id="btnLoop" title="Ulangi Lagu (Loop)" onclick="toggleLoop()"><i class="fa-solid fa-repeat"></i></button>
                     <button class="btn-action-icon" id="btnFullscreen" title="Mode Layar Penuh" onclick="toggleFullscreen()"><i class="fa-solid fa-expand"></i></button>
                     <button class="btn-action-icon" title="Edit Lagu Ini" onclick="showEditForm()"><i class="fa-solid fa-pen-to-square"></i></button>
                     <div class="transpose-group">
@@ -792,7 +826,7 @@
         const firebaseConfig = {
             apiKey: "AIzaSyAkZBMA-5LxNWyMiwZMp7UpbgtAR4rJZU",
             authDomain: "music-c-b3dfa.firebaseapp.com",
-            databaseURL: "https://music-c-b3dfa-default-rtdb.asia-southeast1.firebasedatabase.app", // <--- Tambahkan ini
+            databaseURL: "https://music-c-b3dfa-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "music-c-b3dfa",
             storageBucket: "music-c-b3dfa.firebasestorage.app",
             messagingSenderId: "674465686946",
@@ -807,6 +841,9 @@
         let currentSongIndex = 0;
         let queueList = []; 
         let currentQueueIndex = -1; 
+
+        let isShuffleActive = false;
+        let isLoopActive = false;
 
         const chordList = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         let currentKeyIndex = 0;
@@ -852,17 +889,13 @@
             db.ref('songs').set(songList);
         }
 
-        // Fungsi konversi link otomatis GitHub dan Google Drive
         function parseAudioUrl(url) {
             if (!url) return '';
             let cleanUrl = url.trim();
-            
-            // Konversi link GitHub standar (blob) menjadi raw.githubusercontent.com
             if (cleanUrl.includes('github.com') && !cleanUrl.includes('raw.githubusercontent.com')) {
                 cleanUrl = cleanUrl.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
             }
 
-            // Jika link Google Drive
             let fileId = '';
             let match1 = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
             if (match1 && match1[1]) fileId = match1[1];
@@ -1037,7 +1070,12 @@
             };
 
             audioPlayer.onended = function() {
-                playNextQueue();
+                if (isLoopActive) {
+                    audioPlayer.currentTime = 0;
+                    audioPlayer.play();
+                } else {
+                    playNextQueue();
+                }
             };
             
             audioPlayer.onerror = function() {
@@ -1089,7 +1127,6 @@
                     wrappers.forEach((el, idx) => {
                         if (idx === targetIndex) {
                             el.classList.add('active-lyric');
-                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         } else {
                             el.classList.remove('active-lyric');
                         }
@@ -1114,14 +1151,40 @@
 
         function playNextQueue() {
             if (queueList.length === 0) return;
-            let nextQIdx = (currentQueueIndex + 1) % queueList.length;
-            playQueueIndex(nextQIdx);
+            
+            if (isShuffleActive) {
+                let randomQIdx = Math.floor(Math.random() * queueList.length);
+                playQueueIndex(randomQIdx);
+            } else {
+                let nextQIdx = (currentQueueIndex + 1) % queueList.length;
+                playQueueIndex(nextQIdx);
+            }
         }
 
         function playPrevQueue() {
             if (queueList.length === 0) return;
             let prevQIdx = (currentQueueIndex - 1 + queueList.length) % queueList.length;
             playQueueIndex(prevQIdx);
+        }
+
+        function toggleShuffle() {
+            isShuffleActive = !isShuffleActive;
+            const btn = document.getElementById('btnShuffle');
+            if (isShuffleActive) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        }
+
+        function toggleLoop() {
+            isLoopActive = !isLoopActive;
+            const btn = document.getElementById('btnLoop');
+            if (isLoopActive) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
         }
 
         function renderPlayer() {
@@ -1141,13 +1204,25 @@
             const lines = song.rawText.split('\n');
             let pendingChordLine = '';
 
+            let totalLyricLines = 0;
+            lines.forEach(l => {
+                let trimmed = l.trim();
+                let isTag = (trimmed.startsWith('[') && trimmed.endsWith(']')) || /^(intro|verse|chorus|reff|bridge|outro|solo|coda|bait)\s*[:\-]?$/i.test(trimmed);
+                let tokens = trimmed.split(/\s+/);
+                let chordPattern = /^[A-G][#b]?(m|7|maj7|dim|sus4|2|4)?(\/[A-G][#b]?)?$/;
+                let chordCount = tokens.filter(token => chordPattern.test(token)).length;
+                let isChord = tokens.length > 0 && (chordCount / tokens.length >= 0.5);
+                if (!isTag && !isChord && trimmed !== '') totalLyricLines++;
+            });
+
+            let currentLyricCount = 0;
+
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i];
                 let trimmed = line.trim();
                 
                 if (trimmed === '') continue;
 
-                // Cek apakah baris ini adalah Section Tag (contoh: [Verse] atau Verse:)
                 let isSectionTag = (trimmed.startsWith('[') && trimmed.endsWith(']')) || 
                                    /^(intro|verse|chorus|reff|bridge|outro|solo|coda|bait)\s*[:\-]?$/i.test(trimmed);
                 
@@ -1161,8 +1236,6 @@
                     continue;
                 }
 
-                // Deteksi otomatis baris chord tanpa tanda kurung siku [...]
-                // Baris dianggap chord jika mayoritas kata di dalamnya adalah nama kunci gitar (A-G)
                 let tokens = trimmed.split(/\s+/);
                 let chordPattern = /^[A-G][#b]?(m|7|maj7|dim|sus4|2|4)?(\/[A-G][#b]?)?$/;
                 let chordCount = tokens.filter(token => chordPattern.test(token)).length;
@@ -1174,6 +1247,19 @@
                     const wrapper = document.createElement('div');
                     wrapper.className = 'lyric-line-wrapper';
 
+                    let lineIndex = currentLyricCount;
+                    wrapper.onclick = function() {
+                        if (audioPlayer.duration && !isNaN(audioPlayer.duration)) {
+                            let targetTime = (lineIndex / Math.max(1, totalLyricLines)) * audioPlayer.duration;
+                            audioPlayer.currentTime = targetTime;
+                            if (audioPlayer.paused) {
+                                audioPlayer.play();
+                            }
+                        }
+                    };
+
+                    currentLyricCount++;
+
                     const chordDiv = document.createElement('div');
                     chordDiv.className = 'chords-row';
                     
@@ -1181,7 +1267,6 @@
                     if (document.getElementById('numberFormatToggle').checked && processedChord) {
                         processedChord = convertToNashvilleNumbers(processedChord, currentKeyIndex);
                     }
-                    // Menghilangkan spasi kosong di awal agar chord rata kiri
                     chordDiv.innerText = processedChord.trimStart();
 
                     const lyricDiv = document.createElement('div');
