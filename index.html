@@ -1180,7 +1180,8 @@
                     if (document.getElementById('numberFormatToggle').checked && processedChord) {
                         processedChord = convertToNashvilleNumbers(processedChord, currentKeyIndex);
                     }
-                    chordDiv.innerText = processedChord;
+                    // Menghilangkan spasi kosong di awal agar chord rata kiri
+                    chordDiv.innerText = processedChord.trimStart();
 
                     const lyricDiv = document.createElement('div');
                     lyricDiv.className = 'lyrics-row';
