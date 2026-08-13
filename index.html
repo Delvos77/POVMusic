@@ -3,11 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chordify Web - Google Drive Audio Integration</title>
+    <title>Chordify Web - Firebase Sync</title>
     <!-- Google Fonts & FontAwesome -->
     <link href="https://fonts.googleapis.com/css2?family=Circular+Std:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Firebase SDK (Compat Version agar kompatibel dengan kode satu file HTML) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
     <style>
         :root {
             --font-scale: 1;
@@ -783,20 +787,22 @@
     </div>
 
     <script>
-        let songList = JSON.parse(localStorage.getItem('web_saved_songs')) || [
-            {
-                title: "Here Again (Contoh GDrive)",
-                artist: "Elevation Worship",
-                audioPath: "", 
-                rawText: 
-`[Verse 1]
-[C       G/B    Am]
-Can't go back to the beginning
-[F       C      G]
-Can't unsee what I've seen`
-            }
-        ];
+        // ================= FIREBASE CONFIG =================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAkZBMA-5LxNWyMiwZMp7UpbgtAR4rJZU",
+            authDomain: "music-c-b3dfa.firebaseapp.com",
+            projectId: "music-c-b3dfa",
+            storageBucket: "music-c-b3dfa.firebasestorage.app",
+            messagingSenderId: "674465686946",
+            appId: "1:674465686946:web:37dee28607362fd3ac7efb",
+            measurementId: "G-WKQEMCQ9D8"
+        };
 
+        // Inisialisasi Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let songList = [];
         let currentSongIndex = 0;
         let queueList = []; 
         let currentQueueIndex = -1; 
@@ -815,7 +821,38 @@ Can't unsee what I've seen`
         let isScrolling = false;
         let fontScale = 1.0;
 
-        // Fungsi konversi link Google Drive yang disempurnakan dengan &confirm=t
+        // Ambil data secara *Real-time* dari Firebase
+        function initFirebaseSync() {
+            db.ref('songs').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    songList = data;
+                } else {
+                    songList = [
+                        {
+                            title: "Here Again (Contoh GDrive)",
+                            artist: "Elevation Worship",
+                            audioPath: "", 
+                            rawText: "[Verse 1]\n[C       G/B    Am]\nCan't go back to the beginning\n[F       C      G]\nCan't unsee what I've seen"
+                        }
+                    ];
+                    db.ref('songs').set(songList);
+                }
+                renderSidebar();
+                if (songList.length > 0 && currentSongIndex >= songList.length) {
+                    currentSongIndex = 0;
+                }
+                if (songList.length > 0 && !isEditing) {
+                    selectSong(currentSongIndex, false);
+                }
+            });
+        }
+
+        function saveSongsToFirebase() {
+            db.ref('songs').set(songList);
+        }
+
+        // Fungsi konversi link Google Drive dengan &confirm=t
         function parseGoogleDriveUrl(url) {
             if (!url) return '';
             let cleanUrl = url.trim();
@@ -970,7 +1007,7 @@ Can't unsee what I've seen`
             document.getElementById('songCurrentTime').innerText = "00:00";
             document.getElementById('songDuration').innerText = "00:00";
 
-            if (!song.audioPath || song.audioPath.trim() === "") {
+            if (!song || !song.audioPath || song.audioPath.trim() === "") {
                 playerBar.style.display = 'none';
                 audioPlayer.src = "";
                 return;
@@ -1094,6 +1131,7 @@ Can't unsee what I've seen`
             }
 
             const song = songList[currentSongIndex];
+            if (!song) return;
             document.getElementById('displayTitle').innerText = song.title;
             document.getElementById('displayArtist').innerText = song.artist;
 
@@ -1313,7 +1351,7 @@ Can't unsee what I've seen`
                 audioPath, 
                 rawText 
             });
-            localStorage.setItem('web_saved_songs', JSON.stringify(songList));
+            saveSongsToFirebase();
             selectSong(songList.length - 1, true);
         }
 
@@ -1334,14 +1372,14 @@ Can't unsee what I've seen`
                 audioPath, 
                 rawText 
             };
-            localStorage.setItem('web_saved_songs', JSON.stringify(songList));
+            saveSongsToFirebase();
             selectSong(currentSongIndex, false);
         }
 
         function deleteSong() {
             if (confirm('Apakah Anda yakin ingin menghapus lagu ini?')) {
                 songList.splice(currentSongIndex, 1);
-                localStorage.setItem('web_saved_songs', JSON.stringify(songList));
+                saveSongsToFirebase();
                 queueList = queueList.filter(idx => idx !== currentSongIndex).map(idx => idx > currentSongIndex ? idx - 1 : idx);
                 currentSongIndex = songList.length > 0 ? 0 : null;
                 if (currentSongIndex !== null) {
@@ -1428,9 +1466,7 @@ Can't unsee what I've seen`
         }
 
         window.onload = function() {
-            if (songList.length > 0) {
-                selectSong(0, true);
-            }
+            initFirebaseSync();
         };
     </script>
 </body>
