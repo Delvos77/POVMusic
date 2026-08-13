@@ -758,7 +758,7 @@
             <!-- Pemutar Musik -->
             <div class="player-bar" id="playerBarContainer">
                 <button class="btn-play-song" id="btnPlayAudio" onclick="togglePlayMusic()"><i class="fa-solid fa-play" id="playIcon"></i></button>
-                <span id="audioStatusText" style="font-weight: 600; color: #fff;">Putar Audio Google Drive</span>
+                <span id="audioStatusText" style="font-weight: 600; color: #fff;">Putar Audio GitHub</span>
                 <span id="songCurrentTime" style="margin-left: auto;">00:00</span>
                 <span>/</span>
                 <span id="songDuration">00:00</span>
@@ -830,9 +830,9 @@
                 } else {
                     songList = [
                         {
-                            title: "Here Again (Contoh GDrive)",
+                            title: "Here Again (Contoh GitHub)",
                             artist: "Elevation Worship",
-                            audioPath: "", 
+                            audioPath: "https://raw.githubusercontent.com/Delvos77/POVMusic/main/Songs/Elevation%20Worship/here%20again.mp3", 
                             rawText: "[Verse 1]\n[C       G/B    Am]\nCan't go back to the beginning\n[F       C      G]\nCan't unsee what I've seen"
                         }
                     ];
@@ -852,28 +852,28 @@
             db.ref('songs').set(songList);
         }
 
-        // Fungsi konversi link Google Drive dengan &confirm=t
-        function parseGoogleDriveUrl(url) {
+        // Fungsi konversi link otomatis (Mendukung GDrive & GitHub Raw)
+        function parseAudioUrl(url) {
             if (!url) return '';
             let cleanUrl = url.trim();
+            
+            // Jika link Google Drive
             let fileId = '';
-            
             let match1 = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-            if (match1 && match1[1]) {
-                fileId = match1[1];
-            }
-            
+            if (match1 && match1[1]) fileId = match1[1];
             if (!fileId) {
                 let match2 = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-                if (match2 && match2[1]) {
-                    fileId = match2[1];
-                }
+                if (match2 && match2[1]) fileId = match2[1];
             }
-            
             if (fileId) {
                 return `https://docs.google.com/uc?export=download&confirm=t&id=${fileId}`;
             }
             
+            // Jika link GitHub biasa (bukan raw), otomatis ubah ke raw.githubusercontent.com
+            if (cleanUrl.includes('github.com') && !cleanUrl.includes('raw.githubusercontent.com')) {
+                cleanUrl = cleanUrl.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+            }
+
             return cleanUrl;
         }
 
@@ -1014,11 +1014,11 @@
             }
 
             playerBar.style.display = 'flex';
-            let directUrl = parseGoogleDriveUrl(song.audioPath);
+            let directUrl = parseAudioUrl(song.audioPath);
 
             audioPlayer.src = directUrl;
             audioPlayer.load();
-            document.getElementById('audioStatusText').innerText = "Siap diputar (GDrive)";
+            document.getElementById('audioStatusText').innerText = "Siap diputar";
 
             audioPlayer.onloadedmetadata = function() {
                 document.getElementById('songDuration').innerText = formatTime(audioPlayer.duration);
@@ -1026,7 +1026,7 @@
 
             audioPlayer.onplay = function() {
                 document.getElementById('playIcon').className = "fa-solid fa-pause";
-                document.getElementById('audioStatusText').innerText = "Memutar dari Google Drive...";
+                document.getElementById('audioStatusText').innerText = "Memutar Audio...";
                 startSyncLoop();
             };
 
@@ -1041,19 +1041,19 @@
             };
             
             audioPlayer.onerror = function() {
-                document.getElementById('audioStatusText').innerText = "Gagal memuat audio GDrive (Cek izin link / format)";
+                document.getElementById('audioStatusText').innerText = "Gagal memuat audio (Cek link atau path file)";
             };
         }
 
         function togglePlayMusic() {
             if (!audioPlayer.src) {
-                alert('Link audio Google Drive belum diatur!');
+                alert('Link audio belum diatur!');
                 return;
             }
 
             if (audioPlayer.paused) {
                 audioPlayer.play().catch(err => {
-                    alert('Gagal memutar audio dari Google Drive. Pastikan akses link diset "Anyone with the link".');
+                    alert('Gagal memutar audio. Pastikan link file valid.');
                 });
             } else {
                 audioPlayer.pause();
@@ -1271,7 +1271,7 @@
             const container = document.getElementById('viewportBody');
             container.innerHTML = `
                 <div class="form-container">
-                    <h2>Tambah Lagu & Link Google Drive</h2>
+                    <h2>Tambah Lagu & Link Audio GitHub</h2>
                     <div class="form-group">
                         <label>Judul Lagu</label>
                         <input type="text" id="inputTitle" placeholder="Misal: Here Again">
@@ -1281,8 +1281,8 @@
                         <input type="text" id="inputArtist" placeholder="Misal: Elevation Worship">
                     </div>
                     <div class="form-group">
-                        <label>Link Audio (Tempel Link Google Drive di sini)</label>
-                        <input type="text" id="inputAudioPath" placeholder="https://drive.google.com/file/d/.../view">
+                        <label>Link Audio (Tempel Link GitHub / Raw di sini)</label>
+                        <input type="text" id="inputAudioPath" placeholder="https://raw.githubusercontent.com/...">
                     </div>
                     <div class="form-group">
                         <label>Format Lirik & Chord</label>
@@ -1308,7 +1308,7 @@
             const container = document.getElementById('viewportBody');
             container.innerHTML = `
                 <div class="form-container">
-                    <h2>Edit Lagu & Link Google Drive</h2>
+                    <h2>Edit Lagu & Link Audio GitHub</h2>
                     <div class="form-group">
                         <label>Judul Lagu</label>
                         <input type="text" id="inputTitle" value="${song.title}">
@@ -1318,8 +1318,8 @@
                         <input type="text" id="inputArtist" value="${song.artist}">
                     </div>
                     <div class="form-group">
-                        <label>Link Audio (Tempel Link Google Drive di sini)</label>
-                        <input type="text" id="inputAudioPath" value="${song.audioPath || ''}" placeholder="https://drive.google.com/file/d/.../view">
+                        <label>Link Audio (Tempel Link GitHub / Raw di sini)</label>
+                        <input type="text" id="inputAudioPath" value="${song.audioPath || ''}" placeholder="https://raw.githubusercontent.com/...">
                     </div>
                     <div class="form-group">
                         <label>Format Lirik & Chord</label>
