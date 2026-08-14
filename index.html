@@ -1583,46 +1583,32 @@
             
             isShuffleActive = !isShuffleActive;
             const btn = document.getElementById('btnShuffle');
-            if (isShuffleActive) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-
-            let randomIndex = currentSongIndex;
-            if (songList.length > 1) {
-                while (randomIndex === currentSongIndex) {
-                    randomIndex = Math.floor(Math.random() * songList.length);
+            if (btn) {
+                if (isShuffleActive) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
                 }
             }
-            selectSong(randomIndex, true);
         }
-
+        
         function playRandomSongBySameArtist() {
             if (songList.length === 0 || currentSongIndex === null) return;
-            
-            const currentArtist = songList[currentSongIndex].artist;
-            
-            let sameArtistIndices = [];
-            songList.forEach((song, idx) => {
-                if (song.artist.toLowerCase() === currentArtist.toLowerCase()) {
-                    sameArtistIndices.push(idx);
+        
+            const artistBtn = document.getElementById('btnShuffleArtist');
+            if (artistBtn) {
+                // Toggle status aktif/nonaktif untuk shuffle artis
+                const isActive = artistBtn.classList.contains('active');
+                if (isActive) {
+                    artistBtn.classList.remove('active');
+                } else {
+                    artistBtn.classList.add('active');
+                    // Opsional: matikan shuffle biasa jika shuffle artis dinyalakan agar tidak bentrok
+                    isShuffleActive = false;
+                    const shuffleBtn = document.getElementById('btnShuffle');
+                    if (shuffleBtn) shuffleBtn.classList.remove('active');
                 }
-            });
-
-            if (sameArtistIndices.length <= 1) {
-                alert(`Tidak ada lagu lain dari artis "${currentArtist}" di daftar.`);
-                return;
             }
-
-            let filteredIndices = sameArtistIndices.filter(idx => idx !== currentSongIndex);
-            let randomIdx = filteredIndices[Math.floor(Math.random() * filteredIndices.length)];
-
-            selectSong(randomIdx, true);
-
-            const btn = document.getElementById('btnShuffleArtist');
-            btn.classList.add('active');
-            setTimeout(() => btn.classList.remove('active'), 400);
         }
 
         function toggleLoop() {
