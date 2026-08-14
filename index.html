@@ -2025,6 +2025,17 @@
         window.onload = function() {
             initFirebaseSync();
         };
+        // Memaksa masuk mode fullscreen saat layar disentuh atau aplikasi dimuat
+        function triggerFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log("Fullscreen ditolak browser:", err);
+                });
+            }
+        }
+        
+        // Opsional: Panggil fungsi ini saat pengguna mengklik area halaman atau tombol tertentu
+        document.addEventListener('click', triggerFullscreen, { once: true });
     </script>
 </body>
 </html>
