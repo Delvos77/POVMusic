@@ -1,7 +1,7 @@
 {
   "background_color": "#ffffff",
   "dir": "ltr",
-  "display": "fullscreen",
+  "display": "standalone",
   "name": "POV Library",
   "orientation": "any",
   "scope": "/POVMusic/",
