@@ -828,7 +828,8 @@
                     </div>
                 </div>
                 <div class="control-actions">
-                    <button class="btn-action-icon" id="btnShuffle" title="Acak Lagu (Shuffle)" onclick="toggleShuffle()"><i class="fa-solid fa-shuffle"></i></button>
+                    <button class="btn-action-icon" id="btnShuffle" title="Acak Lagu Bebas" onclick="playRandomSong()"><i class="fa-solid fa-shuffle"></i></button>
+                    <button class="btn-action-icon" id="btnShuffleArtist" title="Acak Lagu Artis yang Sama" onclick="playRandomSongBySameArtist()"><i class="fa-solid fa-users"></i></button>
                     <button class="btn-action-icon" id="btnLoop" title="Ulangi Lagu (Loop)" onclick="toggleLoop()"><i class="fa-solid fa-repeat"></i></button>
                     <button class="btn-action-icon" id="btnFullscreen" title="Mode Layar Penuh" onclick="toggleFullscreen()"><i class="fa-solid fa-expand"></i></button>
                     <button class="btn-action-icon" title="Edit Lagu Ini" onclick="showEditForm()"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -1383,7 +1384,6 @@
 
                 document.getElementById('songCurrentTime').innerText = formatTime(currentSec);
                 
-                // Pastikan max seekbar terupdate jika sebelumnya NaN
                 if (!isNaN(totalSec) && totalSec > 0) {
                     let seekbar = document.getElementById('audioSeekbar');
                     if (seekbar.max != totalSec) {
@@ -1443,14 +1443,48 @@
             playQueueIndex(prevQIdx);
         }
 
-        function toggleShuffle() {
-            isShuffleActive = !isShuffleActive;
-            const btn = document.getElementById('btnShuffle');
-            if (isShuffleActive) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
+        function playRandomSong() {
+            if (songList.length === 0) return;
+            
+            let randomIndex = currentSongIndex;
+            if (songList.length > 1) {
+                while (randomIndex === currentSongIndex) {
+                    randomIndex = Math.floor(Math.random() * songList.length);
+                }
             }
+            
+            selectSong(randomIndex, true);
+            
+            const btn = document.getElementById('btnShuffle');
+            btn.classList.add('active');
+            setTimeout(() => btn.classList.remove('active'), 400);
+        }
+
+        function playRandomSongBySameArtist() {
+            if (songList.length === 0 || currentSongIndex === null) return;
+            
+            const currentArtist = songList[currentSongIndex].artist;
+            
+            let sameArtistIndices = [];
+            songList.forEach((song, idx) => {
+                if (song.artist.toLowerCase() === currentArtist.toLowerCase()) {
+                    sameArtistIndices.push(idx);
+                }
+            });
+
+            if (sameArtistIndices.length <= 1) {
+                alert(`Tidak ada lagu lain dari artis "${currentArtist}" di daftar.`);
+                return;
+            }
+
+            let filteredIndices = sameArtistIndices.filter(idx => idx !== currentSongIndex);
+            let randomIdx = filteredIndices[Math.floor(Math.random() * filteredIndices.length)];
+
+            selectSong(randomIdx, true);
+
+            const btn = document.getElementById('btnShuffleArtist');
+            btn.classList.add('active');
+            setTimeout(() => btn.classList.remove('active'), 400);
         }
 
         function toggleLoop() {
