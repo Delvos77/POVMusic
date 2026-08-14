@@ -195,7 +195,7 @@
             color: #b3b3b3;
         }
 
-        .library-section, .queue-section {
+        .library-section, .queue-section, .recent-section, .backup-section {
             margin-top: 5px;
             border-top: 1px solid rgba(255,255,255,0.08);
             padding-top: 12px;
@@ -204,7 +204,7 @@
             gap: 8px;
         }
 
-        .library-header, .queue-header {
+        .library-header, .queue-header, .recent-header, .backup-header {
             font-size: 11px;
             color: #1db954;
             text-transform: uppercase;
@@ -311,7 +311,6 @@
             text-overflow: ellipsis;
         }
 
-        /* Perbaikan Bagian Kontrol Atas agar Rapi & Responsif */
         .control-actions {
             display: flex;
             align-items: center;
@@ -391,6 +390,7 @@
             cursor: pointer;
         }
 
+        /* Player Bar dengan Seekbar & Tombol Maju/Mundur */
         .player-bar {
             display: flex;
             align-items: center;
@@ -415,10 +415,51 @@
             justify-content: center;
             font-size: 13px;
             transition: transform 0.1s;
+            flex-shrink: 0;
         }
 
         .btn-play-song:hover {
             transform: scale(1.1);
+        }
+
+        .btn-seek-skip {
+            background: #2a2a2a;
+            color: #fff;
+            border: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            transition: 0.2s;
+            flex-shrink: 0;
+        }
+
+        .btn-seek-skip:hover {
+            background: #1db954;
+            color: #000;
+        }
+
+        .player-bar input[type="range"] {
+            -webkit-appearance: none;
+            flex: 1;
+            height: 6px;
+            background: #2a2a2a;
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .player-bar input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #1db954;
+            cursor: pointer;
         }
 
         .extra-toolbar {
@@ -696,7 +737,7 @@
         }
     </style>
 </head>
-<body id="mainBody">
+<body id="mainBody" onclick="handleBodyClick(event)">
 
     <!-- Audio Element -->
     <audio id="localAudioPlayer" style="display:none;"></audio>
@@ -729,6 +770,14 @@
         </div>
         <div class="song-list" id="lyricListContainer" style="display: none;"></div>
 
+        <!-- Riwayat Terakhir Dilihat (Recently Viewed) -->
+        <div class="recent-section">
+            <div class="recent-header">
+                <span><i class="fa-solid fa-clock-rotate-left"></i> Terakhir Dilihat</span>
+            </div>
+            <div class="song-list" id="recentListContainer" style="max-height: 120px; margin-top: 4px;"></div>
+        </div>
+
         <div class="library-section">
             <div class="library-header">
                 <span><i class="fa-solid fa-book-open"></i> Library (Abjad A-Z)</span>
@@ -747,6 +796,18 @@
                 <span id="queueCount" style="font-weight: normal; color: #b3b3b3; font-size: 10px;">0 lagu</span>
             </div>
             <div class="song-list" id="queueListContainer" style="max-height: 130px;"></div>
+        </div>
+
+        <!-- Ekspor & Impor Database JSON -->
+        <div class="backup-section">
+            <div class="backup-header">
+                <span><i class="fa-solid fa-database"></i> Backup & Restore</span>
+            </div>
+            <div style="display: flex; gap: 6px; margin-top: 4px;">
+                <button onclick="exportJSON()" style="flex: 1; background: #2a2a2a; color: #fff; border: none; padding: 6px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;"><i class="fa-solid fa-download"></i> Ekspor</button>
+                <button onclick="document.getElementById('importFile').click()" style="flex: 1; background: #2a2a2a; color: #fff; border: none; padding: 6px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;"><i class="fa-solid fa-upload"></i> Impor</button>
+                <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importJSON(event)">
+            </div>
         </div>
     </div>
 
@@ -790,13 +851,16 @@
                 </div>
             </div>
 
-            <!-- Pemutar Musik -->
+            <!-- Pemutar Musik + Tombol Maju/Mundur & Seekbar -->
             <div class="player-bar" id="playerBarContainer">
                 <button class="btn-play-song" id="btnPlayAudio" onclick="togglePlayMusic()"><i class="fa-solid fa-play" id="playIcon"></i></button>
-                <span id="audioStatusText" style="font-weight: 600; color: #fff;">Putar Audio GitHub</span>
-                <span id="songCurrentTime" style="margin-left: auto;">00:00</span>
-                <span>/</span>
-                <span id="songDuration">00:00</span>
+                <button class="btn-seek-skip" onclick="skipAudio(-5)" title="Mundur 5 Detik"><i class="fa-solid fa-backward"></i></button>
+                
+                <span id="songCurrentTime" style="font-size: 11px;">00:00</span>
+                <input type="range" id="audioSeekbar" value="0" min="0" max="100" step="0.1" oninput="onSeekbarInput(this.value)" onchange="onSeekbarChange(this.value)">
+                <span id="songDuration" style="font-size: 11px;">00:00</span>
+                
+                <button class="btn-seek-skip" onclick="skipAudio(5)" title="Maju 5 Detik"><i class="fa-solid fa-forward"></i></button>
             </div>
 
             <!-- Toolbar Fitur Tambahan -->
@@ -838,59 +902,57 @@
         const db = firebase.database();
 
         const GITHUB_CONFIG = {
-    // Jangan tulis token di sini! Biarkan kosong atau hapus baris token.
-    username: "Delvos77",
-    repo: "POVMusic",
-    branch: "main"
-};
-
-async function uploadFileToGitHub(file, path) {
-    // Meminta token secara manual via browser (hanya saat upload)
-    const token = prompt("Masukkan GitHub Personal Access Token Anda untuk mengunggah file:");
-    
-    if (!token) {
-        throw new Error("Token tidak boleh kosong!");
-    }
-
-    const reader = new FileReader();
-    return new Promise((resolve, reject) => {
-        reader.onload = async () => {
-            try {
-                const base64Content = reader.result.split(',')[1];
-                const url = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${path}`;
-                
-                const response = await fetch(url, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${token}`, // Menggunakan token dari prompt
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message: `Upload ${path} via Chordify App`,
-                        content: base64Content,
-                        branch: GITHUB_CONFIG.branch
-                    })
-                });
-
-                const result = await response.json();
-                if (response.ok) {
-                    resolve(result.content.download_url);
-                } else {
-                    reject(result.message);
-                }
-            } catch (error) {
-                reject(error);
-            }
+            username: "Delvos77",
+            repo: "POVMusic",
+            branch: "main"
         };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-}
+
+        async function uploadFileToGitHub(file, path) {
+            const token = prompt("Masukkan GitHub Personal Access Token Anda untuk mengunggah file:");
+            if (!token) {
+                throw new Error("Token tidak boleh kosong!");
+            }
+
+            const reader = new FileReader();
+            return new Promise((resolve, reject) => {
+                reader.onload = async () => {
+                    try {
+                        const base64Content = reader.result.split(',')[1];
+                        const url = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${path}`;
+                        
+                        const response = await fetch(url, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `token ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                message: `Upload ${path} via Chordify App`,
+                                content: base64Content,
+                                branch: GITHUB_CONFIG.branch
+                            })
+                        });
+
+                        const result = await response.json();
+                        if (response.ok) {
+                            resolve(result.content.download_url);
+                        } else {
+                            reject(result.message);
+                        }
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
 
         let songList = [];
-        let currentSongIndex = 0;
+        let currentSongIndex = null;
         let queueList = []; 
         let currentQueueIndex = -1; 
+        let recentSongIndices = []; // Menyimpan riwayat terakhir dilihat
 
         let isShuffleActive = false;
         let isLoopActive = false;
@@ -901,6 +963,7 @@ async function uploadFileToGitHub(file, path) {
 
         let audioPlayer = document.getElementById('localAudioPlayer');
         let syncInterval = null;
+        let isSeeking = false; // Status untuk mencegah konflik geser slider audio
 
         let animationId = null;
         let lastScrollTime = 0;
@@ -926,17 +989,98 @@ async function uploadFileToGitHub(file, path) {
                     db.ref('songs').set(songList);
                 }
                 renderSidebar();
-                if (songList.length > 0 && currentSongIndex >= songList.length) {
-                    currentSongIndex = 0;
-                }
-                if (songList.length > 0 && !isEditing) {
-                    selectSong(currentSongIndex, false);
+                
+                if (currentSongIndex === null && songList.length > 0) {
+                    showWelcomeScreen();
                 }
             });
         }
 
+        function showWelcomeScreen() {
+            currentSongIndex = null;
+            stopAudio();
+            stopAutoScroll();
+            isEditing = false;
+            
+            document.getElementById('contentHeader').style.display = 'none';
+            renderSidebar();
+
+            const container = document.getElementById('viewportBody');
+            let artistsMap = {};
+            songList.forEach((song, index) => {
+                let artist = song.artist || 'Unknown Artist';
+                if (!artistsMap[artist]) artistsMap[artist] = [];
+                artistsMap[artist].push({ ...song, originalIndex: index });
+            });
+
+            let html = `
+                <div style="padding: 15px; max-width: 600px; margin: 0 auto;">
+                    <h2 style="font-size: 18px; margin-bottom: 20px; color: #fff; text-align: center;">Pilih Artis atau Band</h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;">
+            `;
+
+            for (let artist in artistsMap) {
+                html += `
+                    <div style="background: #181818; padding: 15px; border-radius: 12px; border: 1px solid #2a2a2a; 
+                                display: flex; flex-direction: column; align-items: center; justify-content: center; 
+                                text-align: center; cursor: pointer; transition: 0.2s;"
+                         onmouseover="this.style.background='#222'" onmouseout="this.style.background='#181818'"
+                         onclick="filterByArtistFromScreen('${artist}')">
+                        <i class="fa-solid fa-music" style="color: #1db954; font-size: 20px; margin-bottom: 10px;"></i>
+                        <div style="font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 4px;">${artist}</div>
+                        <div style="font-size: 10px; color: #777;">${artistsMap[artist].length} Lagu</div>
+                    </div>
+                `;
+            }
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        function filterByArtistFromScreen(artistName) {
+            document.getElementById('searchMetaInput').value = artistName;
+            renderSidebar();
+            if(window.innerWidth <= 768) {
+                toggleMobileSidebar();
+            }
+        }
+
         function saveSongsToFirebase() {
             db.ref('songs').set(songList);
+        }
+
+        // --- Fitur Ekspor & Impor JSON ---
+        function exportJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(songList, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "chordify_backup_" + Date.now() + ".json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (Array.isArray(importedData)) {
+                        if (confirm(`Impor ${importedData.length} lagu? Data lagu saat ini akan diperbarui.`)) {
+                            songList = importedData;
+                            saveSongsToFirebase();
+                            alert("Berhasil mengimpor database lagu!");
+                        }
+                    } else {
+                        alert("Format file JSON tidak valid.");
+                    }
+                } catch (err) {
+                    alert("Gagal membaca file JSON: " + err);
+                }
+            };
+            reader.readAsText(file);
         }
 
         function parseAudioUrl(url) {
@@ -969,6 +1113,7 @@ async function uploadFileToGitHub(file, path) {
             const metaContainer = document.getElementById('songListContainer');
             const lyricContainer = document.getElementById('lyricListContainer');
             const libraryContainer = document.getElementById('libraryListContainer');
+            const recentContainer = document.getElementById('recentListContainer');
             
             const metaKeyword = document.getElementById('searchMetaInput').value.toLowerCase().trim();
             const lyricKeyword = document.getElementById('searchLyricInput').value.toLowerCase().trim();
@@ -1003,6 +1148,22 @@ async function uploadFileToGitHub(file, path) {
                         item.innerHTML = `<div class="song-item-title">${song.title}</div><div class="song-item-artist">${song.artist}</div>`;
                         lyricContainer.appendChild(item);
                     }
+                });
+            }
+
+            // Render Recent Section
+            recentContainer.innerHTML = '';
+            if (recentSongIndices.length === 0) {
+                recentContainer.innerHTML = `<div style="font-size:11px; color:#777; padding:4px 12px;">Belum ada riwayat.</div>`;
+            } else {
+                recentSongIndices.forEach(idx => {
+                    const song = songList[idx];
+                    if (!song) return;
+                    const item = document.createElement('div');
+                    item.className = `song-item ${idx === currentSongIndex && !isEditing ? 'active' : ''}`;
+                    item.onclick = () => { selectSong(idx, true); if(window.innerWidth <= 768) toggleMobileSidebar(); };
+                    item.innerHTML = `<div class="song-item-title">${song.title}</div><div class="song-item-artist">${song.artist}</div>`;
+                    recentContainer.appendChild(item);
                 });
             }
 
@@ -1069,6 +1230,11 @@ async function uploadFileToGitHub(file, path) {
             document.getElementById('keyDisplay').innerText = chordList[currentKeyIndex];
             document.getElementById('contentHeader').style.display = 'flex';
 
+            // Catat ke riwayat (max 5 lagu unik terakhir)
+            recentSongIndices = recentSongIndices.filter(i => i !== index);
+            recentSongIndices.unshift(index);
+            if (recentSongIndices.length > 5) recentSongIndices.pop();
+
             if (addToQueue) {
                 let existingQIndex = queueList.indexOf(index);
                 if (existingQIndex !== -1) {
@@ -1089,6 +1255,7 @@ async function uploadFileToGitHub(file, path) {
             const playerBar = document.getElementById('playerBarContainer');
             document.getElementById('songCurrentTime').innerText = "00:00";
             document.getElementById('songDuration').innerText = "00:00";
+            document.getElementById('audioSeekbar').value = 0;
 
             if (!song || !song.audioPath || song.audioPath.trim() === "") {
                 playerBar.style.display = 'none';
@@ -1105,6 +1272,7 @@ async function uploadFileToGitHub(file, path) {
 
             audioPlayer.onloadedmetadata = function() {
                 document.getElementById('songDuration').innerText = formatTime(audioPlayer.duration);
+                document.getElementById('audioSeekbar').max = audioPlayer.duration;
             };
 
             audioPlayer.onplay = function() {
@@ -1160,6 +1328,27 @@ async function uploadFileToGitHub(file, path) {
             return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
         }
 
+        // --- Fungsi Kontrol Maju/Mundur & Seekbar ---
+        function skipAudio(seconds) {
+            if (!audioPlayer.src || isNaN(audioPlayer.duration)) return;
+            let newTime = audioPlayer.currentTime + seconds;
+            if (newTime < 0) newTime = 0;
+            if (newTime > audioPlayer.duration) newTime = audioPlayer.duration;
+            audioPlayer.currentTime = newTime;
+            document.getElementById('audioSeekbar').value = newTime;
+        }
+
+        function onSeekbarInput(val) {
+            isSeeking = true;
+            document.getElementById('songCurrentTime').innerText = formatTime(parseFloat(val));
+        }
+
+        function onSeekbarChange(val) {
+            if (!audioPlayer.src || isNaN(audioPlayer.duration)) return;
+            audioPlayer.currentTime = parseFloat(val);
+            isSeeking = false;
+        }
+
         function startSyncLoop() {
             stopSyncLoop();
             syncInterval = setInterval(() => {
@@ -1168,6 +1357,9 @@ async function uploadFileToGitHub(file, path) {
                 let totalSec = audioPlayer.duration || 1;
 
                 document.getElementById('songCurrentTime').innerText = formatTime(currentSec);
+                if (!isSeeking) {
+                    document.getElementById('audioSeekbar').value = currentSec;
+                }
 
                 let wrappers = document.querySelectorAll('.lyric-line-wrapper');
                 if (wrappers.length > 0) {
@@ -1396,6 +1588,16 @@ async function uploadFileToGitHub(file, path) {
             }
         }
 
+        // --- Shortcut Ketuk Layar: Tap sekali di viewport untuk Play/Pause atau Stop Auto-Scroll ---
+        function handleBodyClick(e) {
+            // Jika klik terjadi di dalam viewport lirik lagu (bukan di sidebar, header, atau tombol)
+            if (e.target.closest('.viewport-body') && !e.target.closest('.lyric-line-wrapper') && !e.target.closest('.form-container')) {
+                if (isScrolling) {
+                    stopAutoScroll(); // Jika auto-scroll sedang aktif, tap layar akan menghentikannya
+                }
+            }
+        }
+
         function toggleFullscreen() {
             const body = document.getElementById('mainBody');
             const btn = document.getElementById('btnFullscreen');
@@ -1484,41 +1686,40 @@ async function uploadFileToGitHub(file, path) {
         }
 
         async function saveNewSong() {
-                const title = document.getElementById('inputTitle').value.trim();
-                const artist = document.getElementById('inputArtist').value.trim();
-                let audioPath = document.getElementById('inputAudioPath').value.trim();
-                const rawText = document.getElementById('inputRaw').value.trim();
-                const fileInput = document.getElementById('inputAudioFile');
+            const title = document.getElementById('inputTitle').value.trim();
+            const artist = document.getElementById('inputArtist').value.trim();
+            let audioPath = document.getElementById('inputAudioPath').value.trim();
+            const rawText = document.getElementById('inputRaw').value.trim();
+            const fileInput = document.getElementById('inputAudioFile');
 
-                if (!title || !rawText) {
-                    alert('Judul dan lirik wajib diisi!');
+            if (!title || !rawText) {
+                alert('Judul dan lirik wajib diisi!');
+                return;
+            }
+
+            if (fileInput && fileInput.files.length > 0) {
+                try {
+                    const file = fileInput.files[0];
+                    const fileName = `audio/${Date.now()}_${file.name}`;
+                
+                    alert('Sedang mengunggah file audio ke GitHub...');
+                    audioPath = await uploadFileToGitHub(file, fileName);
+                } catch (error) {
+                    alert('Gagal mengunggah file ke GitHub: ' + error);
                     return;
-    }
+                }
+            }
 
-        // Jika user memilih file audio baru, upload dulu ke GitHub
-        if (fileInput && fileInput.files.length > 0) {
-            try {
-                const file = fileInput.files[0];
-                const fileName = `audio/${Date.now()}_${file.name}`;
-            
-                alert('Sedang mengunggah file audio ke GitHub...');
-                audioPath = await uploadFileToGitHub(file, fileName);
-        }     catch (error) {
-            alert('Gagal mengunggah file ke GitHub: ' + error);
-            return; // Batalkan penyimpanan jika upload gagal
+            songList.push({
+                title,
+                artist: artist || 'Unknown Artist',
+                audioPath,
+                rawText
+            });
+
+            saveSongsToFirebase();
+            selectSong(songList.length - 1, true);
         }
-    }
-
-    songList.push({
-        title,
-        artist: artist || 'Unknown Artist',
-        audioPath,
-        rawText
-    });
-
-    saveSongsToFirebase();
-    selectSong(songList.length - 1, true);
-}
 
         function updateSong() {
             const title = document.getElementById('inputTitle').value.trim();
@@ -1546,6 +1747,7 @@ async function uploadFileToGitHub(file, path) {
                 songList.splice(currentSongIndex, 1);
                 saveSongsToFirebase();
                 queueList = queueList.filter(idx => idx !== currentSongIndex).map(idx => idx > currentSongIndex ? idx - 1 : idx);
+                recentSongIndices = recentSongIndices.filter(idx => idx !== currentSongIndex).map(idx => idx > currentSongIndex ? idx - 1 : idx);
                 currentSongIndex = songList.length > 0 ? 0 : null;
                 if (currentSongIndex !== null) {
                     selectSong(0, false);
