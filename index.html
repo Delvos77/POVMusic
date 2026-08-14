@@ -1556,22 +1556,26 @@
             }
         }
 
-        function playNextQueue() {
-            if (queueList.length === 0) return;
-            
-            if (isShuffleActive) {
-                let randomQIdx = Math.floor(Math.random() * queueList.length);
-                playQueueIndex(randomQIdx);
-            } else {
-                let nextQIdx = (currentQueueIndex + 1) % queueList.length;
-                playQueueIndex(nextQIdx);
-            }
-        }
-
         function playPrevQueue() {
-            if (queueList.length === 0) return;
-            let prevQIdx = (currentQueueIndex - 1 + queueList.length) % queueList.length;
-            playQueueIndex(prevQIdx);
+            if (songList.length === 0 || currentSongIndex === null) return;
+            let prevIndex = (currentSongIndex - 1 + songList.length) % songList.length;
+            selectSong(prevIndex, true);
+        }
+        
+        function playNextQueue() {
+            if (songList.length === 0 || currentSongIndex === null) return;
+        
+            const artistBtn = document.getElementById('btnShuffleArtist');
+            const isArtistShuffleActive = artistBtn && artistBtn.classList.contains('active');
+        
+            if (isArtistShuffleActive) {
+                playRandomSongBySameArtist();
+            } else if (isShuffleActive) {
+                playRandomSong();
+            } else {
+                let nextIndex = (currentSongIndex + 1) % songList.length;
+                selectSong(nextIndex, true);
+            }
         }
 
         function playRandomSong() {
