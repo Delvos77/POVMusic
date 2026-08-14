@@ -390,7 +390,7 @@
             cursor: pointer;
         }
 
-        /* Player Bar dengan Seekbar & Tombol Maju/Mundur */
+        /* Player Bar */
         .player-bar {
             display: flex;
             align-items: center;
@@ -740,7 +740,7 @@
 <body id="mainBody" onclick="handleBodyClick(event)">
 
     <!-- Audio Element -->
-    <audio id="localAudioPlayer" style="display:none;"></audio>
+    <audio id="localAudioPlayer" preload="auto" style="display:none;"></audio>
 
     <!-- Sidebar Kiri -->
     <div class="sidebar" id="appSidebar">
@@ -851,7 +851,7 @@
                 </div>
             </div>
 
-            <!-- Pemutar Musik + Tombol Maju/Mundur & Seekbar -->
+            <!-- Pemutar Musik + Status & Seekbar -->
             <div class="player-bar" id="playerBarContainer">
                 <button class="btn-play-song" id="btnPlayAudio" onclick="togglePlayMusic()"><i class="fa-solid fa-play" id="playIcon"></i></button>
                 <button class="btn-seek-skip" onclick="skipAudio(-5)" title="Mundur 5 Detik"><i class="fa-solid fa-backward"></i></button>
@@ -861,6 +861,7 @@
                 <span id="songDuration" style="font-size: 11px;">00:00</span>
                 
                 <button class="btn-seek-skip" onclick="skipAudio(5)" title="Maju 5 Detik"><i class="fa-solid fa-forward"></i></button>
+                <span id="audioStatusText" style="font-size: 10px; color: #1db954; margin-left: 8px; white-space: nowrap;">Siap</span>
             </div>
 
             <!-- Toolbar Fitur Tambahan -->
@@ -952,7 +953,7 @@
         let currentSongIndex = null;
         let queueList = []; 
         let currentQueueIndex = -1; 
-        let recentSongIndices = []; // Menyimpan riwayat terakhir dilihat
+        let recentSongIndices = [];
 
         let isShuffleActive = false;
         let isLoopActive = false;
@@ -963,7 +964,7 @@
 
         let audioPlayer = document.getElementById('localAudioPlayer');
         let syncInterval = null;
-        let isSeeking = false; // Status untuk mencegah konflik geser slider audio
+        let isSeeking = false;
 
         let animationId = null;
         let lastScrollTime = 0;
@@ -1049,7 +1050,6 @@
             db.ref('songs').set(songList);
         }
 
-        // --- Fitur Ekspor & Impor JSON ---
         function exportJSON() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(songList, null, 2));
             const downloadAnchor = document.createElement('a');
@@ -1151,7 +1151,6 @@
                 });
             }
 
-            // Render Recent Section
             recentContainer.innerHTML = '';
             if (recentSongIndices.length === 0) {
                 recentContainer.innerHTML = `<div style="font-size:11px; color:#777; padding:4px 12px;">Belum ada riwayat.</div>`;
@@ -1230,7 +1229,6 @@
             document.getElementById('keyDisplay').innerText = chordList[currentKeyIndex];
             document.getElementById('contentHeader').style.display = 'flex';
 
-            // Catat ke riwayat (max 5 lagu unik terakhir)
             recentSongIndices = recentSongIndices.filter(i => i !== index);
             recentSongIndices.unshift(index);
             if (recentSongIndices.length > 5) recentSongIndices.pop();
@@ -1253,9 +1251,13 @@
         function initAudioPlayerForCurrentSong() {
             const song = songList[currentSongIndex];
             const playerBar = document.getElementById('playerBarContainer');
+            const statusText = document.getElementById('audioStatusText');
+            
             document.getElementById('songCurrentTime').innerText = "00:00";
             document.getElementById('songDuration').innerText = "00:00";
-            document.getElementById('audioSeekbar').value = 0;
+            const seekbar = document.getElementById('audioSeekbar');
+            seekbar.value = 0;
+            seekbar.max = 100;
 
             if (!song || !song.audioPath || song.audioPath.trim() === "") {
                 playerBar.style.display = 'none';
@@ -1266,28 +1268,45 @@
             playerBar.style.display = 'flex';
             let directUrl = parseAudioUrl(song.audioPath);
 
+            statusText.innerText = "Memuat...";
             audioPlayer.src = directUrl;
             audioPlayer.load();
-            document.getElementById('audioStatusText').innerText = "Siap diputar";
 
-            audioPlayer.onloadedmetadata = function() {
-                document.getElementById('songDuration').innerText = formatTime(audioPlayer.duration);
-                document.getElementById('audioSeekbar').max = audioPlayer.duration;
+            const checkDuration = () => {
+                if (!isNaN(audioPlayer.duration) && audioPlayer.duration > 0 && audioPlayer.duration !== Infinity) {
+                    document.getElementById('songDuration').innerText = formatTime(audioPlayer.duration);
+                    seekbar.max = audioPlayer.duration;
+                    statusText.innerText = "Siap diputar";
+                } else {
+                    setTimeout(() => {
+                        if (!isNaN(audioPlayer.duration) && audioPlayer.duration > 0) {
+                            document.getElementById('songDuration').innerText = formatTime(audioPlayer.duration);
+                            seekbar.max = audioPlayer.duration;
+                            statusText.innerText = "Siap diputar";
+                        }
+                    }, 500);
+                }
             };
+
+            audioPlayer.onloadedmetadata = checkDuration;
+            audioPlayer.ondurationchange = checkDuration;
 
             audioPlayer.onplay = function() {
                 document.getElementById('playIcon').className = "fa-solid fa-pause";
-                document.getElementById('audioStatusText').innerText = "Memutar Audio...";
+                statusText.innerText = "Memutar...";
                 startSyncLoop();
             };
 
             audioPlayer.onpause = function() {
                 document.getElementById('playIcon').className = "fa-solid fa-play";
-                document.getElementById('audioStatusText').innerText = "Dijeda";
+                if (!audioPlayer.ended) {
+                    statusText.innerText = "Dijeda";
+                }
                 stopSyncLoop();
             };
 
             audioPlayer.onended = function() {
+                statusText.innerText = "Selesai";
                 if (isLoopActive) {
                     audioPlayer.currentTime = 0;
                     audioPlayer.play();
@@ -1296,8 +1315,9 @@
                 }
             };
             
-            audioPlayer.onerror = function() {
-                document.getElementById('audioStatusText').innerText = "Gagal memuat audio (Cek link atau path file)";
+            audioPlayer.onerror = function(e) {
+                statusText.innerText = "Gagal memuat audio!";
+                console.error("Audio Error:", audioPlayer.error);
             };
         }
 
@@ -1308,9 +1328,14 @@
             }
 
             if (audioPlayer.paused) {
-                audioPlayer.play().catch(err => {
-                    alert('Gagal memutar audio. Pastikan link file valid.');
-                });
+                let playPromise = audioPlayer.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(err => {
+                        console.error("Play error:", err);
+                        document.getElementById('audioStatusText').innerText = "Gagal memutar (Cek URL)";
+                        alert('Gagal memutar audio. Pastikan link file audio publik dan dapat diakses.');
+                    });
+                }
             } else {
                 audioPlayer.pause();
             }
@@ -1323,12 +1348,12 @@
         }
 
         function formatTime(seconds) {
+            if (isNaN(seconds) || seconds < 0) return "00:00";
             let m = Math.floor(seconds / 60);
             let s = Math.floor(seconds % 60);
             return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
         }
 
-        // --- Fungsi Kontrol Maju/Mundur & Seekbar ---
         function skipAudio(seconds) {
             if (!audioPlayer.src || isNaN(audioPlayer.duration)) return;
             let newTime = audioPlayer.currentTime + seconds;
@@ -1354,15 +1379,24 @@
             syncInterval = setInterval(() => {
                 if (audioPlayer.paused) return;
                 let currentSec = audioPlayer.currentTime;
-                let totalSec = audioPlayer.duration || 1;
+                let totalSec = audioPlayer.duration;
 
                 document.getElementById('songCurrentTime').innerText = formatTime(currentSec);
-                if (!isSeeking) {
-                    document.getElementById('audioSeekbar').value = currentSec;
+                
+                // Pastikan max seekbar terupdate jika sebelumnya NaN
+                if (!isNaN(totalSec) && totalSec > 0) {
+                    let seekbar = document.getElementById('audioSeekbar');
+                    if (seekbar.max != totalSec) {
+                        seekbar.max = totalSec;
+                        document.getElementById('songDuration').innerText = formatTime(totalSec);
+                    }
+                    if (!isSeeking) {
+                        seekbar.value = currentSec;
+                    }
                 }
 
                 let wrappers = document.querySelectorAll('.lyric-line-wrapper');
-                if (wrappers.length > 0) {
+                if (wrappers.length > 0 && !isNaN(totalSec) && totalSec > 0) {
                     let progressRatio = currentSec / totalSec;
                     let targetIndex = Math.floor(progressRatio * wrappers.length);
 
@@ -1374,7 +1408,7 @@
                         }
                     });
                 }
-            }, 500);
+            }, 300);
         }
 
         function stopSyncLoop() {
@@ -1588,12 +1622,10 @@
             }
         }
 
-        // --- Shortcut Ketuk Layar: Tap sekali di viewport untuk Play/Pause atau Stop Auto-Scroll ---
         function handleBodyClick(e) {
-            // Jika klik terjadi di dalam viewport lirik lagu (bukan di sidebar, header, atau tombol)
             if (e.target.closest('.viewport-body') && !e.target.closest('.lyric-line-wrapper') && !e.target.closest('.form-container')) {
                 if (isScrolling) {
-                    stopAutoScroll(); // Jika auto-scroll sedang aktif, tap layar akan menghentikannya
+                    stopAutoScroll();
                 }
             }
         }
