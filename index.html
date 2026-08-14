@@ -998,7 +998,7 @@
             });
         }
 
-        function showWelcomeScreen() {
+        function showWelcomeScreen(filterKeyword = "") {
             currentSongIndex = null;
             stopAudio();
             stopAutoScroll();
@@ -1017,17 +1017,31 @@
 
             let html = `
                 <div style="padding: 15px; max-width: 600px; margin: 0 auto;">
-                    <h2 style="font-size: 18px; margin-bottom: 20px; color: #fff; text-align: center;">Pilih Artis atau Band</h2>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;">
+                    <!-- Search Bar Home -->
+                    <div style="margin-bottom: 20px; position: relative;">
+                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #b3b3b3; font-size: 14px;"></i>
+                        <input type="text" id="homeSearchInput" placeholder="Cari artis atau band..." value="${filterKeyword}" 
+                               oninput="filterWelcomeArtists(this.value)"
+                               style="width: 100%; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 24px; padding: 12px 16px 12px 40px; color: white; font-size: 14px; outline: none; transition: 0.2s;"
+                               onfocus="this.style.borderColor='#1db954'" onblur="this.style.borderColor='#2a2a2a'">
+                    </div>
+
+                    <h2 style="font-size: 18px; margin-bottom: 15px; color: #fff;">Pilih Artis atau Band</h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;" id="artistGridContainer">
             `;
 
+            let hasArtist = false;
             for (let artist in artistsMap) {
+                if (filterKeyword && !artist.toLowerCase().includes(filterKeyword.toLowerCase())) {
+                    continue;
+                }
+                hasArtist = true;
                 html += `
                     <div style="background: #181818; padding: 15px; border-radius: 12px; border: 1px solid #2a2a2a; 
                                 display: flex; flex-direction: column; align-items: center; justify-content: center; 
                                 text-align: center; cursor: pointer; transition: 0.2s;"
                          onmouseover="this.style.background='#222'" onmouseout="this.style.background='#181818'"
-                         onclick="filterByArtistFromScreen('${artist}')">
+                         onclick="showArtistSongs('${artist.replace(/'/g, "\\'")}')">
                         <i class="fa-solid fa-music" style="color: #1db954; font-size: 20px; margin-bottom: 10px;"></i>
                         <div style="font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 4px;">${artist}</div>
                         <div style="font-size: 10px; color: #777;">${artistsMap[artist].length} Lagu</div>
@@ -1035,15 +1049,65 @@
                 `;
             }
 
+            if (!hasArtist) {
+                html += `<div style="grid-column: 1 / -1; color: #777; font-size: 13px; text-align: center; padding: 20px;">Tidak ada artis yang cocok.</div>`;
+            }
+
             html += `</div></div>`;
             container.innerHTML = html;
         }
 
-        function filterByArtistFromScreen(artistName) {
-            document.getElementById('searchMetaInput').value = artistName;
-            renderSidebar();
-            if(window.innerWidth <= 768) {
-                toggleMobileSidebar();
+        function showArtistSongs(artistName) {
+            let artistsMap = {};
+            songList.forEach((song, index) => {
+                let artist = song.artist || 'Unknown Artist';
+                if (!artistsMap[artist]) artistsMap[artist] = [];
+                artistsMap[artist].push({ ...song, originalIndex: index });
+            });
+
+            const artistSongs = artistsMap[artistName] || [];
+            const container = document.getElementById('viewportBody');
+
+            let html = `
+                <div style="padding: 15px; max-width: 600px; margin: 0 auto;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                        <button onclick="showWelcomeScreen()" style="background: #2a2a2a; color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-arrow-left"></i></button>
+                        <h2 style="font-size: 18px; color: #fff; margin: 0;">Daftar Lagu: ${artistName}</h2>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+            `;
+
+            if (artistSongs.length === 0) {
+                html += `<div style="color: #777; font-size: 13px; text-align: center; padding: 20px;">Tidak ada lagu untuk artis ini.</div>`;
+            } else {
+                artistSongs.forEach(song => {
+                    html += `
+                        <div style="background: #181818; padding: 12px 16px; border-radius: 8px; border: 1px solid #2a2a2a; 
+                                    display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s;"
+                             onmouseover="this.style.background='#222'" onmouseout="this.style.background='#181818'"
+                             onclick="selectSong(${song.originalIndex}, true)">
+                            <div>
+                                <div style="font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 2px;">${song.title}</div>
+                                <div style="font-size: 11px; color: #b3b3b3;">${song.artist}</div>
+                            </div>
+                            <div style="background: #1db954; color: #000; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px;">
+                                <i class="fa-solid fa-play"></i>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        function filterWelcomeArtists(keyword) {
+            showWelcomeScreen(keyword);
+            const inputEl = document.getElementById('homeSearchInput');
+            if (inputEl) {
+                inputEl.focus();
+                inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
             }
         }
 
@@ -1247,6 +1311,17 @@
             renderSidebar();
             renderPlayer();
             initAudioPlayerForCurrentSong();
+
+            setTimeout(() => {
+                if (audioPlayer.src) {
+                    let playPromise = audioPlayer.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(error => {
+                            console.log("Autoplay dicegah oleh browser:", error);
+                        });
+                    }
+                }
+            }, 300);
         }
 
         function initAudioPlayerForCurrentSong() {
@@ -1446,18 +1521,21 @@
         function playRandomSong() {
             if (songList.length === 0) return;
             
+            isShuffleActive = !isShuffleActive;
+            const btn = document.getElementById('btnShuffle');
+            if (isShuffleActive) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+
             let randomIndex = currentSongIndex;
             if (songList.length > 1) {
                 while (randomIndex === currentSongIndex) {
                     randomIndex = Math.floor(Math.random() * songList.length);
                 }
             }
-            
             selectSong(randomIndex, true);
-            
-            const btn = document.getElementById('btnShuffle');
-            btn.classList.add('active');
-            setTimeout(() => btn.classList.remove('active'), 400);
         }
 
         function playRandomSongBySameArtist() {
@@ -1499,7 +1577,7 @@
 
         function renderPlayer() {
             if (songList.length === 0) {
-                document.getElementById('viewportBody').innerHTML = `<p style="color:#b3b3b3; text-align:center; margin-top:50px;">Belum ada lagu.</p>`;
+                showWelcomeScreen();
                 return;
             }
 
@@ -1821,7 +1899,7 @@
                     isEditing = false;
                     document.getElementById('contentHeader').style.display = 'none';
                     renderSidebar();
-                    document.getElementById('viewportBody').innerHTML = `<p style="color:#b3b3b3; text-align:center; margin-top:50px;">Belum ada lagu.</p>`;
+                    showWelcomeScreen();
                 }
             }
         }
