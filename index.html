@@ -837,6 +837,56 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        const GITHUB_CONFIG = {
+    // Jangan tulis token di sini! Biarkan kosong atau hapus baris token.
+    username: "Delvos77",
+    repo: "POVMusic",
+    branch: "main"
+};
+
+async function uploadFileToGitHub(file, path) {
+    // Meminta token secara manual via browser (hanya saat upload)
+    const token = prompt("Masukkan GitHub Personal Access Token Anda untuk mengunggah file:");
+    
+    if (!token) {
+        throw new Error("Token tidak boleh kosong!");
+    }
+
+    const reader = new FileReader();
+    return new Promise((resolve, reject) => {
+        reader.onload = async () => {
+            try {
+                const base64Content = reader.result.split(',')[1];
+                const url = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/${path}`;
+                
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${token}`, // Menggunakan token dari prompt
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Upload ${path} via Chordify App`,
+                        content: base64Content,
+                        branch: GITHUB_CONFIG.branch
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    resolve(result.content.download_url);
+                } else {
+                    reject(result.message);
+                }
+            } catch (error) {
+                reject(error);
+            }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
         let songList = [];
         let currentSongIndex = 0;
         let queueList = []; 
@@ -1379,8 +1429,9 @@
                         <input type="text" id="inputArtist" placeholder="Misal: Elevation Worship">
                     </div>
                     <div class="form-group">
-                        <label>Link Audio (Tempel Link GitHub / Raw di sini)</label>
-                        <input type="text" id="inputAudioPath" placeholder="https://github.com/... atau https://raw.githubusercontent.com/...">
+                        <label>Pilih File Audio (MP3)</label>
+                        <input type="file" id="inputAudioFile" accept="audio/mp3">
+                        <input type="hidden" id="inputAudioPath" value="">
                     </div>
                     <div class="form-group">
                         <label>Format Lirik & Chord</label>
@@ -1432,26 +1483,42 @@
             `;
         }
 
-        function saveNewSong() {
-            const title = document.getElementById('inputTitle').value.trim();
-            const artist = document.getElementById('inputArtist').value.trim();
-            const audioPath = document.getElementById('inputAudioPath').value.trim();
-            const rawText = document.getElementById('inputRaw').value.trim();
+        async function saveNewSong() {
+                const title = document.getElementById('inputTitle').value.trim();
+                const artist = document.getElementById('inputArtist').value.trim();
+                let audioPath = document.getElementById('inputAudioPath').value.trim();
+                const rawText = document.getElementById('inputRaw').value.trim();
+                const fileInput = document.getElementById('inputAudioFile');
 
-            if (!title || !rawText) {
-                alert('Judul dan lirik wajib diisi!');
-                return;
-            }
+                if (!title || !rawText) {
+                    alert('Judul dan lirik wajib diisi!');
+                    return;
+    }
 
-            songList.push({ 
-                title, 
-                artist: artist || 'Unknown Artist', 
-                audioPath, 
-                rawText 
-            });
-            saveSongsToFirebase();
-            selectSong(songList.length - 1, true);
+        // Jika user memilih file audio baru, upload dulu ke GitHub
+        if (fileInput && fileInput.files.length > 0) {
+            try {
+                const file = fileInput.files[0];
+                const fileName = `audio/${Date.now()}_${file.name}`;
+            
+                alert('Sedang mengunggah file audio ke GitHub...');
+                audioPath = await uploadFileToGitHub(file, fileName);
+        }     catch (error) {
+            alert('Gagal mengunggah file ke GitHub: ' + error);
+            return; // Batalkan penyimpanan jika upload gagal
         }
+    }
+
+    songList.push({
+        title,
+        artist: artist || 'Unknown Artist',
+        audioPath,
+        rawText
+    });
+
+    saveSongsToFirebase();
+    selectSong(songList.length - 1, true);
+}
 
         function updateSong() {
             const title = document.getElementById('inputTitle').value.trim();
