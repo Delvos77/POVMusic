@@ -752,6 +752,13 @@
             </div>
         </div>
 
+        <!-- Tombol Menu Home -->
+        <div style="margin-top: 4px;">
+            <button onclick="showWelcomeScreen(); if(window.innerWidth <= 768) toggleMobileSidebar();" style="width: 100%; background: #2a2a2a; color: #1db954; border: 1px solid rgba(29,185,84,0.3); padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;" onmouseover="this.style.background='#222'" onmouseout="this.style.background='#2a2a2a'">
+                <i class="fa-solid fa-house"></i> Beranda (Home)
+            </button>
+        </div>
+
         <div class="search-section">
             <label><i class="fa-solid fa-microphone-lines"></i> Judul / Artis</label>
             <div class="search-box">
@@ -954,7 +961,17 @@
         let currentSongIndex = null;
         let queueList = []; 
         let currentQueueIndex = -1; 
+        
+        // Memuat riwayat dari localStorage jika ada
         let recentSongIndices = [];
+        try {
+            const savedRecent = localStorage.getItem('chordify_recent_songs');
+            if (savedRecent) {
+                recentSongIndices = JSON.parse(savedRecent);
+            }
+        } catch(e) {
+            recentSongIndices = [];
+        }
 
         let isShuffleActive = false;
         let isLoopActive = false;
@@ -962,6 +979,7 @@
         const chordList = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         let currentKeyIndex = 0;
         let isEditing = false;
+        let isHomeActive = false; 
 
         let audioPlayer = document.getElementById('localAudioPlayer');
         let syncInterval = null;
@@ -990,6 +1008,11 @@
                     ];
                     db.ref('songs').set(songList);
                 }
+                
+                // Validasi indeks riwayat jika ada lagu yang terhapus dari database
+                recentSongIndices = recentSongIndices.filter(idx => idx < songList.length);
+                localStorage.setItem('chordify_recent_songs', JSON.stringify(recentSongIndices));
+
                 renderSidebar();
                 
                 if (currentSongIndex === null && songList.length > 0) {
@@ -999,8 +1022,7 @@
         }
 
         function showWelcomeScreen(filterKeyword = "") {
-            currentSongIndex = null;
-            stopAudio();
+            isHomeActive = true;
             stopAutoScroll();
             isEditing = false;
             
@@ -1008,52 +1030,80 @@
             renderSidebar();
 
             const container = document.getElementById('viewportBody');
-            let artistsMap = {};
+            
+            let filteredSongs = [];
             songList.forEach((song, index) => {
+                let title = song.title || '';
                 let artist = song.artist || 'Unknown Artist';
-                if (!artistsMap[artist]) artistsMap[artist] = [];
-                artistsMap[artist].push({ ...song, originalIndex: index });
+                if (!filterKeyword || artist.toLowerCase().includes(filterKeyword.toLowerCase()) || title.toLowerCase().includes(filterKeyword.toLowerCase())) {
+                    filteredSongs.push({ ...song, originalIndex: index });
+                }
             });
 
             let html = `
                 <div style="padding: 15px; max-width: 600px; margin: 0 auto;">
-                    <!-- Search Bar Home -->
                     <div style="margin-bottom: 20px; position: relative;">
                         <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #b3b3b3; font-size: 14px;"></i>
-                        <input type="text" id="homeSearchInput" placeholder="Cari artis atau band..." value="${filterKeyword}" 
-                               oninput="filterWelcomeArtists(this.value)"
+                        <input type="text" id="homeSearchInput" placeholder="Cari judul lagu atau artis..." value="${filterKeyword}" 
+                               oninput="filterWelcomeSongs(this.value)"
                                style="width: 100%; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 24px; padding: 12px 16px 12px 40px; color: white; font-size: 14px; outline: none; transition: 0.2s;"
                                onfocus="this.style.borderColor='#1db954'" onblur="this.style.borderColor='#2a2a2a'">
                     </div>
-
-                    <h2 style="font-size: 18px; margin-bottom: 15px; color: #fff;">Pilih Artis atau Band</h2>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;" id="artistGridContainer">
             `;
 
-            let hasArtist = false;
-            for (let artist in artistsMap) {
-                if (filterKeyword && !artist.toLowerCase().includes(filterKeyword.toLowerCase())) {
-                    continue;
+            if (filterKeyword) {
+                html += `<h2 style="font-size: 18px; margin-bottom: 15px; color: #fff;">Hasil Pencarian ("${filterKeyword}")</h2>`;
+                html += `<div style="display: flex; flex-direction: column; gap: 8px;">`;
+                
+                if (filteredSongs.length === 0) {
+                    html += `<div style="color: #777; font-size: 13px; text-align: center; padding: 20px;">Tidak ada judul lagu atau artis yang cocok.</div>`;
+                } else {
+                    filteredSongs.forEach(song => {
+                        html += `
+                            <div style="background: #181818; padding: 12px 16px; border-radius: 8px; border: 1px solid #2a2a2a; 
+                                        display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s;"
+                                 onmouseover="this.style.background='#222'" onmouseout="this.style.background='#181818'"
+                                 onclick="selectSong(${song.originalIndex}, true)">
+                                <div>
+                                    <div style="font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 2px;">${song.title}</div>
+                                    <div style="font-size: 11px; color: #b3b3b3;">${song.artist}</div>
+                                </div>
+                                <div style="background: #1db954; color: #000; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px;">
+                                    <i class="fa-solid fa-play"></i>
+                                </div>
+                            </div>
+                        `;
+                    });
                 }
-                hasArtist = true;
-                html += `
-                    <div style="background: #181818; padding: 15px; border-radius: 12px; border: 1px solid #2a2a2a; 
-                                display: flex; flex-direction: column; align-items: center; justify-content: center; 
-                                text-align: center; cursor: pointer; transition: 0.2s;"
-                         onmouseover="this.style.background='#222'" onmouseout="this.style.background='#181818'"
-                         onclick="showArtistSongs('${artist.replace(/'/g, "\\'")}')">
-                        <i class="fa-solid fa-music" style="color: #1db954; font-size: 20px; margin-bottom: 10px;"></i>
-                        <div style="font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 4px;">${artist}</div>
-                        <div style="font-size: 10px; color: #777;">${artistsMap[artist].length} Lagu</div>
-                    </div>
-                `;
+                html += `</div>`;
+            } else {
+                let artistsMap = {};
+                songList.forEach((song, index) => {
+                    let artist = song.artist || 'Unknown Artist';
+                    if (!artistsMap[artist]) artistsMap[artist] = [];
+                    artistsMap[artist].push({ ...song, originalIndex: index });
+                });
+
+                html += `<h2 style="font-size: 18px; margin-bottom: 15px; color: #fff;">Pilih Artis atau Band</h2>`;
+                html += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;" id="artistGridContainer">`;
+
+                for (let artist in artistsMap) {
+                    html += `
+                        <div style="background: #181818; padding: 15px; border-radius: 12px; border: 1px solid #2a2a2a; 
+                                    display: flex; flex-direction: column; align-items: center; justify-content: center; 
+                                    text-align: center; cursor: pointer; transition: 0.2s;"
+                             onmouseover="this.style.background='#222'" onmouseout="this.style.background='#181818'"
+                             onclick="showArtistSongs('${artist.replace(/'/g, "\\'")}')">
+                            <i class="fa-solid fa-music" style="color: #1db954; font-size: 20px; margin-bottom: 10px;"></i>
+                            <div style="font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 4px;">${artist}</div>
+                            <div style="font-size: 10px; color: #777;">${artistsMap[artist].length} Lagu</div>
+                        </div>
+                    `;
+                }
+                html += `</div>`;
             }
 
-            if (!hasArtist) {
-                html += `<div style="grid-column: 1 / -1; color: #777; font-size: 13px; text-align: center; padding: 20px;">Tidak ada artis yang cocok.</div>`;
-            }
-
-            html += `</div></div>`;
+            html += `</div>`;
             container.innerHTML = html;
         }
 
@@ -1102,7 +1152,7 @@
             container.innerHTML = html;
         }
 
-        function filterWelcomeArtists(keyword) {
+        function filterWelcomeSongs(keyword) {
             showWelcomeScreen(keyword);
             const inputEl = document.getElementById('homeSearchInput');
             if (inputEl) {
@@ -1192,7 +1242,7 @@
                 songList.forEach((song, index) => {
                     if (song.title.toLowerCase().includes(metaKeyword) || song.artist.toLowerCase().includes(metaKeyword)) {
                         const item = document.createElement('div');
-                        item.className = `song-item ${index === currentSongIndex && !isEditing ? 'active' : ''}`;
+                        item.className = `song-item ${index === currentSongIndex && !isEditing && !isHomeActive ? 'active' : ''}`;
                         item.onclick = () => { selectSong(index, true); if(window.innerWidth <= 768) toggleMobileSidebar(); };
                         item.innerHTML = `<div class="song-item-title">${song.title}</div><div class="song-item-artist">${song.artist}</div>`;
                         metaContainer.appendChild(item);
@@ -1208,7 +1258,7 @@
                 songList.forEach((song, index) => {
                     if (song.rawText.toLowerCase().includes(lyricKeyword)) {
                         const item = document.createElement('div');
-                        item.className = `song-item ${index === currentSongIndex && !isEditing ? 'active' : ''}`;
+                        item.className = `song-item ${index === currentSongIndex && !isEditing && !isHomeActive ? 'active' : ''}`;
                         item.onclick = () => { selectSong(index, true); if(window.innerWidth <= 768) toggleMobileSidebar(); };
                         item.innerHTML = `<div class="song-item-title">${song.title}</div><div class="song-item-artist">${song.artist}</div>`;
                         lyricContainer.appendChild(item);
@@ -1224,7 +1274,7 @@
                     const song = songList[idx];
                     if (!song) return;
                     const item = document.createElement('div');
-                    item.className = `song-item ${idx === currentSongIndex && !isEditing ? 'active' : ''}`;
+                    item.className = `song-item ${idx === currentSongIndex && !isEditing && !isHomeActive ? 'active' : ''}`;
                     item.onclick = () => { selectSong(idx, true); if(window.innerWidth <= 768) toggleMobileSidebar(); };
                     item.innerHTML = `<div class="song-item-title">${song.title}</div><div class="song-item-artist">${song.artist}</div>`;
                     recentContainer.appendChild(item);
@@ -1252,7 +1302,7 @@
                 } else {
                     limitedLibrary.forEach(song => {
                         const item = document.createElement('div');
-                        item.className = `song-item ${song.originalIndex === currentSongIndex && !isEditing ? 'active' : ''}`;
+                        item.className = `song-item ${song.originalIndex === currentSongIndex && !isEditing && !isHomeActive ? 'active' : ''}`;
                         item.onclick = () => { selectSong(song.originalIndex, true); if(window.innerWidth <= 768) toggleMobileSidebar(); };
                         item.innerHTML = `<div class="song-item-title">${song.title}</div><div class="song-item-artist">${song.artist}</div>`;
                         libraryContainer.appendChild(item);
@@ -1278,7 +1328,7 @@
                 if (!song) return;
 
                 const item = document.createElement('div');
-                item.className = `song-item ${qIdx === currentQueueIndex && !isEditing ? 'active' : ''}`;
+                item.className = `song-item ${qIdx === currentQueueIndex && !isEditing && !isHomeActive ? 'active' : ''}`;
                 item.onclick = () => { playQueueIndex(qIdx); if(window.innerWidth <= 768) toggleMobileSidebar(); };
                 item.innerHTML = `<div class="song-item-title">${song.title}</div><div class="song-item-artist">${song.artist}</div>`;
                 queueContainer.appendChild(item);
@@ -1286,7 +1336,7 @@
         }
 
         function selectSong(index, addToQueue = true) {
-            stopAudio();
+            isHomeActive = false;
             stopAutoScroll();
             isEditing = false;
             currentSongIndex = index;
@@ -1294,9 +1344,11 @@
             document.getElementById('keyDisplay').innerText = chordList[currentKeyIndex];
             document.getElementById('contentHeader').style.display = 'flex';
 
+            // Memperbarui riwayat "Terakhir Dilihat" dan menyimpannya ke localStorage
             recentSongIndices = recentSongIndices.filter(i => i !== index);
             recentSongIndices.unshift(index);
             if (recentSongIndices.length > 5) recentSongIndices.pop();
+            localStorage.setItem('chordify_recent_songs', JSON.stringify(recentSongIndices));
 
             if (addToQueue) {
                 let existingQIndex = queueList.indexOf(index);
@@ -1343,6 +1395,10 @@
 
             playerBar.style.display = 'flex';
             let directUrl = parseAudioUrl(song.audioPath);
+
+            if (audioPlayer.src === directUrl && !audioPlayer.paused) {
+                return;
+            }
 
             statusText.innerText = "Memuat...";
             audioPlayer.src = directUrl;
@@ -1756,7 +1812,6 @@
         }
 
         function showAddForm() {
-            stopAudio();
             stopAutoScroll();
             isEditing = true;
             renderSidebar();
@@ -1792,7 +1847,6 @@
         }
 
         function showEditForm() {
-            stopAudio();
             stopAutoScroll();
             isEditing = true;
             renderSidebar();
@@ -1892,6 +1946,8 @@
                 saveSongsToFirebase();
                 queueList = queueList.filter(idx => idx !== currentSongIndex).map(idx => idx > currentSongIndex ? idx - 1 : idx);
                 recentSongIndices = recentSongIndices.filter(idx => idx !== currentSongIndex).map(idx => idx > currentSongIndex ? idx - 1 : idx);
+                localStorage.setItem('chordify_recent_songs', JSON.stringify(recentSongIndices));
+                
                 currentSongIndex = songList.length > 0 ? 0 : null;
                 if (currentSongIndex !== null) {
                     selectSong(0, false);
