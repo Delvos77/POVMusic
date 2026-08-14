@@ -4,9 +4,9 @@
   "display": "fullscreen",
   "name": "POV Library",
   "orientation": "any",
-  "scope": "/",
+  "scope": "/POVMusic/",
   "short_name": "POV",
-  "start_url": "/",
+  "start_url": "/POVMusic/",
   "theme_color": "#ffffff",
   "id": "https://delvos77.github.io/POVMusic/",
   "icons": [
