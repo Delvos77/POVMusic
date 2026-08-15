@@ -35,12 +35,35 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch Strategy: Cache First, fallback to Network
+// Fetch Strategy: Cache First for assets, Network First with Cache Fallback for dynamic content/audio
 self.addEventListener('fetch', event => {
+  const requestUrl = new URL(event.request.url);
+
+  // Jika permintaan berasal dari folder audio atau songs, gunakan strategi Cache First
+  if (requestUrl.pathname.includes('/audio/') || requestUrl.pathname.includes('/Songs/')) {
+    event.respondWith(
+      caches.match(event.request).then(cachedResponse => {
+        if (cachedResponse) {
+          return cachedResponse; // Putar dari cache saat offline
+        }
+        return fetch(event.request).then(networkResponse => {
+          return caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          });
+        }).catch(() => {
+          // Fallback jika gagal dan offline total
+          console.log('Gagal memuat file audio secara offline.');
+        });
+      })
+    );
+    return;
+  }
+
+  // Strategi untuk halaman utama / aset lainnya
   event.respondWith(
     caches.match(event.request).then(response => {
       return response || fetch(event.request).catch(() => {
-        // Fallback opsional jika offline total untuk halaman utama
         if (event.request.mode === 'navigate') {
           return caches.match('/POVMusic/');
         }
