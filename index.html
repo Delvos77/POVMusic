@@ -2058,7 +2058,14 @@
             };
             reader.readAsText(file);
         }
-
+        
+        if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/POVMusic/service-worker.js')
+      .then(reg => console.log('Service Worker berhasil didaftarkan:', reg.scope))
+      .catch(err => console.log('Pendaftaran Service Worker gagal:', err));
+  });
+}
         window.onload = function() {
             initFirebaseSync();
         };
